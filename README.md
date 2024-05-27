@@ -15,6 +15,7 @@
 ## Synopsis
 
 Export plugins for [RDMO](https://github.com/rdmorganiser/rdmo). This exports the statistics of the projects and users in an instance.
+Adds api endpoints `/api/v1/project-statistics/` and `/api/v1/user-statistics/`.
 
 ## Setup
 
@@ -32,5 +33,3 @@ INSTALLED_APPS = ["rdmo_plugins_statistics", *INSTALLED_APPS]
 ```
 
 After restarting RDMO, the exports should be usable.
-
-
