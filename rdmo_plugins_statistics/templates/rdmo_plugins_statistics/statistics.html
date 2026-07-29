@@ -175,6 +175,26 @@
         </div>
     </section>
 
+    <section
+        class="statistics-section"
+        data-statistics-chart
+        data-statistics-type="category"
+        data-statistics-id="catalog-statistics-data"
+        data-dataset-label="{% translate 'Number of projects' %}"
+        data-x-axis-title="{% translate 'Number of projects' %}"
+        data-y-axis-title="{% translate 'Catalog' %}"
+        data-bar-color="#a8d37d"
+        data-chart-orientation="horizontal"
+    >
+        <h2>{% translate 'Catalog usage - horizontal' %}</h2>
+
+        <div class="statistics-chart-card">
+            <div class="statistics-chart-container">
+                <canvas class="statistics-chart"></canvas>
+            </div>
+        </div>
+    </section>
+
 </div>
 
 {{ project_statistics|json_script:"project-statistics-data" }}

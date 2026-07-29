@@ -280,6 +280,8 @@ const createStatisticsChart = (container) => {
 
     updateTotal(totalElement, initialData.rows)
 
+    const isHorizontal = container.dataset.chartOrientation === 'horizontal'
+
     const chart = new Chart(chartElement, {
         type: 'bar',
 
@@ -303,6 +305,7 @@ const createStatisticsChart = (container) => {
         ],
 
         options: {
+            indexAxis: isHorizontal ? 'y' : 'x',
             responsive: true,
             maintainAspectRatio: false,
 
@@ -322,44 +325,92 @@ const createStatisticsChart = (container) => {
                 }
             },
 
+            // scales: {
+            //     x: {
+            //         beginAtZero: isHorizontal,
+
+            //         title: {
+            //             display: true,
+            //             text: container.dataset.xAxisTitle
+            //         },
+
+            //         grid: {
+            //             display: isHorizontal,
+            //         },
+
+            //         ticks: {
+            //             minRotation: initialData.tickRotation.min,
+            //             maxRotation: initialData.tickRotation.max,
+
+            //             callback(value) {
+            //                 const label = this.getLabelForValue(value)
+
+            //                 return container.dataset.labelOrientation === 'vertical'
+            //                     ? truncateLabel(label)
+            //                     : label
+            //             }
+            //         }
+            //     },
+
+            //     y: {
+            //         beginAtZero: !isHorizontal,
+
+            //         title: {
+            //             display: true,
+            //             text: container.dataset.yAxisTitle
+            //         },
+
+            //         ticks: {
+            //             precision: 0
+            //         }
+            //     }
+            // }
             scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: container.dataset.xAxisTitle
-                    },
+              x: {
+                  beginAtZero: isHorizontal,
 
-                    grid: {
-                        display: false
-                    },
+                  title: {
+                      display: true,
+                      text: container.dataset.xAxisTitle
+                  },
 
-                    ticks: {
-                        minRotation: initialData.tickRotation.min,
-                        maxRotation: initialData.tickRotation.max,
+                  grid: {
+                      display: isHorizontal
+                  },
 
-                        callback(value) {
-                            const label = this.getLabelForValue(value)
+                  ticks: isHorizontal
+                      ? {
+                          precision: 0
+                      }
+                      : {
+                          minRotation: initialData.tickRotation.min,
+                          maxRotation: initialData.tickRotation.max,
 
-                            return container.dataset.labelOrientation === 'vertical'
-                                ? truncateLabel(label)
-                                : label
-                        }
-                    }
-                },
+                          callback(value) {
+                              const label = this.getLabelForValue(value)
 
-                y: {
-                    beginAtZero: true,
+                              return container.dataset.labelOrientation === 'vertical'
+                                  ? truncateLabel(label)
+                                  : label
+                          }
+                      }
+              },
 
-                    title: {
-                        display: true,
-                        text: container.dataset.yAxisTitle
-                    },
+              y: {
+                  beginAtZero: !isHorizontal,
 
-                    ticks: {
-                        precision: 0
-                    }
-                }
-            }
+                  title: {
+                      display: true,
+                      text: container.dataset.yAxisTitle
+                  },
+
+                  ticks: isHorizontal
+                      ? {}
+                      : {
+                          precision: 0
+                      }
+              }
+          }
         }
     })
 
