@@ -108,7 +108,8 @@ def statistics(request):
 
     context = {
         'project_statistics': get_time_statistics(
-            Project.objects.all(),
+            # Project.objects.all(),
+            Project.objects.filter(site=current_site),
             'created',
         ),
         'user_statistics': get_time_statistics(
