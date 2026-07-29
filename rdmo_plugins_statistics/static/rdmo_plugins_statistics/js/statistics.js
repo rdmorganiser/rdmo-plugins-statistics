@@ -44,6 +44,12 @@ const getLabelTickRotation = (container, defaultTickRotation) => {
     return defaultTickRotation
 }
 
+const truncateLabel = (label, maxLength = 20) => {
+    return label.length > maxLength
+        ? `${label.slice(0, maxLength - 1)}...`
+        : label
+}
+
 const getTimeChartRows = (statistics, filters) => {
     const groupedRows = new Map()
 
@@ -329,7 +335,15 @@ const createStatisticsChart = (container) => {
 
                     ticks: {
                         minRotation: initialData.tickRotation.min,
-                        maxRotation: initialData.tickRotation.max
+                        maxRotation: initialData.tickRotation.max,
+
+                        callback(value) {
+                            const label = this.getLabelForValue(value)
+
+                            return container.dataset.labelOrientation === 'vertical'
+                                ? truncateLabel(label)
+                                : label
+                        }
                     }
                 },
 
