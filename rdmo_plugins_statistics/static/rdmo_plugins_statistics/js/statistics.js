@@ -2,46 +2,53 @@ const updateClearDatesButton = (button, filters) => {
     button.disabled = !filters.start && !filters.end
 }
 
-const getLabels = (data, interval) => {
-    return data.labels.map((label) => {
-        const [year, month, day] = label.slice(0, 10).split('-').map(Number)
-        const date = new Date(year, month - 1, day)
+const getDateDisplayLabel = (row, interval) => {
+    const [year, month, day] = row.key.slice(0, 10).split('-').map(Number)
+    const date = new Date(year, month - 1, day)
 
-        if (interval === 'year') {
-            return year.toString()
-        }
+    if (interval === 'year') {
+        return year.toString()
+    }
 
-        if (interval === 'quarter') {
-            const quarter = Math.floor((month - 1) / 3) + 1
+    if (interval === 'quarter') {
+        const quarter = Math.floor((month - 1) / 3) + 1
 
-            return `Q${quarter} ${year}`
-        }
+        return `Q${quarter} ${year}`
+    }
 
-        if (interval === 'month') {
-            return date.toLocaleDateString(undefined, {
-                month: 'short',
-                year: 'numeric'
-            })
-        }
-
+    if (interval === 'month') {
         return date.toLocaleDateString(undefined, {
-            day: '2-digit',
-            month: '2-digit',
+            month: 'short',
             year: 'numeric'
         })
+    }
+
+    return date.toLocaleDateString(undefined, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
     })
 }
 
-const getTickRotation = (interval) => {
-    return interval === 'year' ? 0 : 90
+const getLabelTickRotation = (container, defaultTickRotation) => {
+    const orientation = container.dataset.labelOrientation
+
+    if (orientation === 'vertical') {
+        return { min: 90, max: 90 }
+    }
+
+    if (orientation === 'horizontal') {
+        return { min: 0, max: 0 }
+    }
+
+    return defaultTickRotation
 }
 
-const getFilteredChartData = (statistics, filters) => {
-    const groupedData = new Map()
-    const dayData = statistics.day
+const getTimeChartRows = (statistics, filters) => {
+    const groupedRows = new Map()
 
-    dayData.labels.forEach((label, index) => {
-        const date = label.slice(0, 10)
+    statistics.day.rows.forEach((row) => {
+        const date = row.key.slice(0, 10)
 
         if (filters.start && date < filters.start) {
             return
@@ -60,8 +67,7 @@ const getFilteredChartData = (statistics, filters) => {
                 break
 
             case 'quarter': {
-                const quarterStartMonth =
-                    Math.floor((Number(month) - 1) / 3) * 3 + 1
+                const quarterStartMonth = Math.floor((Number(month) - 1) / 3) * 3 + 1
 
                 period = `${year}-${String(quarterStartMonth).padStart(2, '0')}-01`
                 break
@@ -75,33 +81,76 @@ const getFilteredChartData = (statistics, filters) => {
                 period = date
         }
 
-        const currentValue = groupedData.get(period) || 0
+        const currentRow = groupedRows.get(period)
 
-        groupedData.set(
-            period,
-            currentValue + dayData.values[index]
-        )
+        if (currentRow) {
+            currentRow.value += row.value
+        } else {
+            groupedRows.set(period, {
+                key: period,
+                label: period,
+                value: row.value
+            })
+        }
     })
 
-    return {
-        labels: Array.from(groupedData.keys()),
-        values: Array.from(groupedData.values())
+    return Array.from(groupedRows.values())
+}
+
+const statisticsTypes = {
+    time: {
+        getRows: getTimeChartRows,
+
+        getDisplayLabel: (row, filters) => {
+            return getDateDisplayLabel(row, filters.interval)
+        },
+
+        getTickRotation: (filters) => {
+            return filters.interval === 'year'
+                ? { min: 0, max: 0 }
+                : { min: 0, max: 90 }
+        }
+    },
+
+    category: {
+        getRows: (statistics) => {
+            return statistics.rows
+        },
+
+        getDisplayLabel: (row) => {
+            return row.label
+        },
+
+        getTickRotation: () => {
+            return { min: 0, max: 90 }
+        }
     }
 }
 
-const updateBarChart = (chart, data, interval) => {
-    const tickRotation = getTickRotation(interval)
+const prepareChartData = (statisticsType, statistics, filters, container) => {
+    const rows = statisticsType.getRows(statistics, filters)
+    const defaultTickRotation = statisticsType.getTickRotation(filters)
 
-    chart.data.labels = getLabels(data, interval)
-    chart.data.datasets[0].data = data.values
-    chart.options.scales.x.ticks.maxRotation = tickRotation
-    chart.options.scales.x.ticks.minRotation = tickRotation
+    return {
+        rows,
+        displayLabels: rows.map((row) => statisticsType.getDisplayLabel(row, filters)),
+        tickRotation: getLabelTickRotation(container, defaultTickRotation)
+    }
+}
+
+const updateBarChart = (chart, preparedData) => {
+    chart.data.labels = preparedData.displayLabels
+    chart.data.datasets[0].data = preparedData.rows.map((row) => row.value)
+    chart.options.scales.x.ticks.minRotation = preparedData.tickRotation.min
+    chart.options.scales.x.ticks.maxRotation = preparedData.tickRotation.max
 
     chart.update()
 }
 
-const updateTotal = (element, data) => {
-    element.textContent = data.values.reduce((sum, value) => sum + value, 0)
+const updateTotal = (element, rows) => {
+    if (element) {
+        element.textContent = rows.reduce((sum, row) => sum + row.value, 0)
+    }
 }
 
 const drawValueLabelsPlugin = {
@@ -120,11 +169,7 @@ const drawValueLabelsPlugin = {
             const meta = chart.getDatasetMeta(datasetIndex)
 
             meta.data.forEach((bar, index) => {
-                ctx.fillText(
-                    dataset.data[index],
-                    bar.x,
-                    bar.y - 5
-                )
+                ctx.fillText(dataset.data[index], bar.x, bar.y - 5)
             })
         })
 
@@ -132,18 +177,11 @@ const drawValueLabelsPlugin = {
     }
 }
 
-const createStatisticsChart = (container) => {
-    const statisticsElement = document.getElementById(
-        container.dataset.statisticsId
-    )
+const getTimeChartControls = (container) => {
     const intervalSelect = container.querySelector('.statistics-interval')
     const startDateInput = container.querySelector('.statistics-start-date')
     const endDateInput = container.querySelector('.statistics-end-date')
     const clearDatesButton = container.querySelector('.statistics-clear-dates')
-    const totalElement = container.querySelector('.statistics-total')
-    const chartElement = container.querySelector('.statistics-chart')
-
-    const statistics = JSON.parse(statisticsElement.textContent)
     const storageKey = container.dataset.storageKey
     const storedInterval = localStorage.getItem(storageKey)
 
@@ -157,20 +195,95 @@ const createStatisticsChart = (container) => {
         end: endDateInput.value
     }
 
-    const initialData = getFilteredChartData(statistics, filters)
-
     updateClearDatesButton(clearDatesButton, filters)
-    updateTotal(totalElement, initialData)
+
+    return {
+        intervalSelect,
+        startDateInput,
+        endDateInput,
+        clearDatesButton,
+        storageKey,
+        filters
+    }
+}
+
+const addTimeChartListeners = (controls, updateChart) => {
+    const {
+        intervalSelect,
+        startDateInput,
+        endDateInput,
+        clearDatesButton,
+        storageKey,
+        filters
+    } = controls
+
+    intervalSelect.addEventListener('change', () => {
+        filters.interval = intervalSelect.value
+        localStorage.setItem(storageKey, filters.interval)
+        updateChart()
+    })
+
+    startDateInput.addEventListener('change', () => {
+        filters.start = startDateInput.value
+        updateClearDatesButton(clearDatesButton, filters)
+        updateChart()
+    })
+
+    endDateInput.addEventListener('change', () => {
+        filters.end = endDateInput.value
+        updateClearDatesButton(clearDatesButton, filters)
+        updateChart()
+    })
+
+    clearDatesButton.addEventListener('click', () => {
+        startDateInput.value = ''
+        endDateInput.value = ''
+        filters.start = ''
+        filters.end = ''
+
+        updateClearDatesButton(clearDatesButton, filters)
+        updateChart()
+    })
+}
+
+const createStatisticsChart = (container) => {
+    const statisticsElement = document.getElementById(container.dataset.statisticsId)
+    const chartElement = container.querySelector('.statistics-chart')
+    const totalElement = container.querySelector('.statistics-total')
+    const statistics = JSON.parse(statisticsElement.textContent)
+
+    const statisticsTypeName = container.dataset.statisticsType
+    const statisticsType = statisticsTypes[statisticsTypeName]
+
+    if (!statisticsType) {
+        console.error(`Unknown statistics type: ${statisticsTypeName}`)
+        return
+    }
+
+    const controls = statisticsTypeName === 'time'
+        ? getTimeChartControls(container)
+        : null
+
+    const filters = controls?.filters || {}
+
+    const getPreparedData = () => {
+        return prepareChartData(statisticsType, statistics, filters, container)
+    }
+
+    const initialData = getPreparedData()
+
+    updateTotal(totalElement, initialData.rows)
 
     const chart = new Chart(chartElement, {
         type: 'bar',
 
         data: {
-            labels: getLabels(initialData, filters.interval),
+            labels: initialData.displayLabels,
+
             datasets: [
                 {
                     label: container.dataset.datasetLabel,
-                    data: initialData.values,
+                    data: initialData.rows.map((row) => row.value),
                     backgroundColor: container.dataset.barColor,
                     borderWidth: 0,
                     barPercentage: 0.85,
@@ -215,8 +328,8 @@ const createStatisticsChart = (container) => {
                     },
 
                     ticks: {
-                        maxRotation: getTickRotation(filters.interval),
-                        minRotation: getTickRotation(filters.interval)
+                        minRotation: initialData.tickRotation.min,
+                        maxRotation: initialData.tickRotation.max
                     }
                 },
 
@@ -237,41 +350,15 @@ const createStatisticsChart = (container) => {
     })
 
     const updateChart = () => {
-        const data = getFilteredChartData(statistics, filters)
+        const preparedData = getPreparedData()
 
-        updateBarChart(chart, data, filters.interval)
-        updateTotal(totalElement, data)
+        updateBarChart(chart, preparedData)
+        updateTotal(totalElement, preparedData.rows)
     }
 
-    intervalSelect.addEventListener('change', () => {
-        filters.interval = intervalSelect.value
-        localStorage.setItem(storageKey, filters.interval)
-        updateChart()
-    })
-
-    startDateInput.addEventListener('change', () => {
-        filters.start = startDateInput.value
-        updateClearDatesButton(clearDatesButton, filters)
-        updateChart()
-    })
-
-    endDateInput.addEventListener('change', () => {
-        filters.end = endDateInput.value
-        updateClearDatesButton(clearDatesButton, filters)
-        updateChart()
-    })
-
-    clearDatesButton.addEventListener('click', () => {
-        startDateInput.value = ''
-        endDateInput.value = ''
-        filters.start = ''
-        filters.end = ''
-
-        updateClearDatesButton(clearDatesButton, filters)
-        updateChart()
-    })
+    if (controls) {
+        addTimeChartListeners(controls, updateChart)
+    }
 }
 
-document.querySelectorAll('[data-statistics-chart]').forEach(
-    createStatisticsChart
-)
+document.querySelectorAll('[data-statistics-chart]').forEach(createStatisticsChart)

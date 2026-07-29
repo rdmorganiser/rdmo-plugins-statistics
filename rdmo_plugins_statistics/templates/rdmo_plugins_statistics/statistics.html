@@ -22,6 +22,7 @@
     <section
         class="statistics-section"
         data-statistics-chart
+        data-statistics-type="time"
         data-statistics-id="project-statistics-data"
         data-storage-key="project-statistics-interval"
         data-dataset-label="{% translate 'Number of projects' %}"
@@ -89,6 +90,7 @@
     <section
         class="statistics-section"
         data-statistics-chart
+        data-statistics-type="time"
         data-statistics-id="user-statistics-data"
         data-storage-key="user-statistics-interval"
         data-dataset-label="{% translate 'Number of registered users' %}"
@@ -153,10 +155,31 @@
         </div>
     </section>
 
+    <section
+        class="statistics-section"
+        data-statistics-chart
+        data-statistics-type="category"
+        data-statistics-id="catalog-statistics-data"
+        data-dataset-label="{% translate 'Number of projects' %}"
+        data-x-axis-title="{% translate 'Catalog' %}"
+        data-y-axis-title="{% translate 'Number of projects' %}"
+        data-bar-color="#a8d37d"
+        data-label-orientation="vertical"
+    >
+        <h2>{% translate "Catalog usage" %}</h2>
+
+        <div class="statistics-chart-card">
+            <div class="statistics-chart-container">
+                <canvas class="statistics-chart"></canvas>
+            </div>
+        </div>
+    </section>
+
 </div>
 
 {{ project_statistics|json_script:"project-statistics-data" }}
 {{ user_statistics|json_script:"user-statistics-data" }}
+{{ catalog_statistics|json_script:"catalog-statistics-data" }}
 
 <script src="{% static 'rdmo_plugins_statistics/js/chart-4.5.1.umd.min.js' %}"></script>
 <script src="{% static 'rdmo_plugins_statistics/js/statistics.js' %}"></script>
