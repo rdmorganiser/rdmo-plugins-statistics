@@ -1,0 +1,61 @@
+{% load static %}
+{% load static i18n %}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <title>{% translate "Statistics" %}</title>
+
+    <link
+        rel="stylesheet"
+        href="{% static 'rdmo_plugins_statistics/css/statistics.css' %}"
+    >
+</head>
+
+<body>
+
+<div class="statistics-page">
+
+    <h1>Statistics</h1>
+
+    <section class="statistics-section">
+
+        <h2>{% translate "Number of projects" %}</h2>
+
+        <div class="statistics-chart-card">
+
+            <div class="statistics-chart-controls">
+
+                <label for="project-statistics-interval">
+                    {% translate "View by" %}
+                </label>
+
+                <select id="project-statistics-interval">
+                    <option value="day">{% translate "Day" %}</option>
+                    <option value="month" selected>{% translate "Month" %}</option>
+                    <option value="quarter">{%translate "Quarter" %}</option>
+                    <option value="year">{% translate "Year" %}</option>
+                </select>
+
+            </div>
+
+            <div class="statistics-chart-container">
+                <canvas id="project-statistics-chart"></canvas>
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
+
+{{ project_statistics|json_script:"project-statistics-data" }}
+
+<script src="{% static 'rdmo_plugins_statistics/js/chart-4.5.1.umd.min.js' %}"></script>
+
+<script src="{% static 'rdmo_plugins_statistics/js/statistics.js' %}"></script>
+
+</body>
+</html>
