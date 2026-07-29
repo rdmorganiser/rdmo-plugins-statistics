@@ -1,46 +1,48 @@
-# from django.shortcuts import render
-
-
-# def statistics(request):
-#     return render(request, 'rdmo_plugins_statistics/statistics.html')
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import permission_required
 from django.db.models import Count
-from django.db.models.functions import TruncDay, TruncMonth, TruncQuarter, TruncYear
+from django.db.models.functions import TruncDay
 from django.shortcuts import render
 
 from rdmo.projects.models import Project
 
 
-def get_project_statistics(truncation):
-    queryset = (
-        Project.objects
-        .annotate(period=truncation('created'))
+def get_statistics(queryset, date_field):
+    statistics = (
+        queryset
+        .annotate(period=TruncDay(date_field))
         .values('period')
         .annotate(count=Count('id'))
         .order_by('period')
     )
 
     return {
-        'labels': [
-            item['period'].isoformat()
-            for item in queryset
-        ],
-        'values': [
-            item['count']
-            for item in queryset
-        ],
+        'day': {
+            'labels': [
+                item['period'].isoformat()
+                for item in statistics
+            ],
+            'values': [
+                item['count']
+                for item in statistics
+            ],
+        },
     }
+
 
 @permission_required('projects.view_project', raise_exception=True)
 def statistics(request):
+    User = get_user_model()
+
     context = {
-        'project_count': Project.objects.count(),
-        'project_statistics': {
-            'day': get_project_statistics(TruncDay),
-            'month': get_project_statistics(TruncMonth),
-            'quarter': get_project_statistics(TruncQuarter),
-            'year': get_project_statistics(TruncYear),
-        },
+        'project_statistics': get_statistics(
+            Project.objects.all(),
+            'created',
+        ),
+        'user_statistics': get_statistics(
+            User.objects.all(),
+            'date_joined',
+        ),
     }
 
     return render(

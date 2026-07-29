@@ -1,47 +1,20 @@
-const projectStatistics = JSON.parse(
-    document.getElementById('project-statistics-data').textContent
-)
-
-const intervalSelect = document.getElementById(
-    'project-statistics-interval'
-)
-
-const storedInterval = localStorage.getItem(
-    'project-statistics-interval'
-)
-
-if (storedInterval && projectStatistics[storedInterval]) {
-    intervalSelect.value = storedInterval
+const updateClearDatesButton = (button, filters) => {
+    button.disabled = !filters.start && !filters.end
 }
 
-const chartElement = document.getElementById(
-    'project-statistics-chart'
-)
-
-// const getLabels = (interval) => {
-//     const labels = projectStatistics[interval].labels
-
-//     if (interval === 'year') {
-//         return labels.map(label => new Date(label).getFullYear())
-//     }
-
-//     return labels
-// }
-
-const getLabels = (interval) => {
-    const labels = projectStatistics[interval].labels
-
-    return labels.map((label) => {
-        const date = new Date(label)
+const getLabels = (data, interval) => {
+    return data.labels.map((label) => {
+        const [year, month, day] = label.slice(0, 10).split('-').map(Number)
+        const date = new Date(year, month - 1, day)
 
         if (interval === 'year') {
-            return date.getFullYear().toString()
+            return year.toString()
         }
 
         if (interval === 'quarter') {
-            const quarter = Math.floor(date.getMonth() / 3) + 1
+            const quarter = Math.floor((month - 1) / 3) + 1
 
-            return `Q${quarter} ${date.getFullYear()}`
+            return `Q${quarter} ${year}`
         }
 
         if (interval === 'month') {
@@ -63,14 +36,81 @@ const getTickRotation = (interval) => {
     return interval === 'year' ? 0 : 90
 }
 
-const valueLabelsPlugin = {
-    id: 'valueLabels',
+const getFilteredChartData = (statistics, filters) => {
+    const groupedData = new Map()
+    const dayData = statistics.day
+
+    dayData.labels.forEach((label, index) => {
+        const date = label.slice(0, 10)
+
+        if (filters.start && date < filters.start) {
+            return
+        }
+
+        if (filters.end && date > filters.end) {
+            return
+        }
+
+        const [year, month] = date.split('-')
+        let period
+
+        switch (filters.interval) {
+            case 'year':
+                period = `${year}-01-01`
+                break
+
+            case 'quarter': {
+                const quarterStartMonth =
+                    Math.floor((Number(month) - 1) / 3) * 3 + 1
+
+                period = `${year}-${String(quarterStartMonth).padStart(2, '0')}-01`
+                break
+            }
+
+            case 'month':
+                period = `${year}-${month}-01`
+                break
+
+            default:
+                period = date
+        }
+
+        const currentValue = groupedData.get(period) || 0
+
+        groupedData.set(
+            period,
+            currentValue + dayData.values[index]
+        )
+    })
+
+    return {
+        labels: Array.from(groupedData.keys()),
+        values: Array.from(groupedData.values())
+    }
+}
+
+const updateBarChart = (chart, data, interval) => {
+    const tickRotation = getTickRotation(interval)
+
+    chart.data.labels = getLabels(data, interval)
+    chart.data.datasets[0].data = data.values
+    chart.options.scales.x.ticks.maxRotation = tickRotation
+    chart.options.scales.x.ticks.minRotation = tickRotation
+
+    chart.update()
+}
+
+const updateTotal = (element, data) => {
+    element.textContent = data.values.reduce((sum, value) => sum + value, 0)
+}
+
+const drawValueLabelsPlugin = {
+    id: 'drawValueLabels',
 
     afterDatasetsDraw(chart) {
         const { ctx } = chart
 
         ctx.save()
-
         ctx.textAlign = 'center'
         ctx.textBaseline = 'bottom'
         ctx.font = '600 11px Arial'
@@ -92,100 +132,146 @@ const valueLabelsPlugin = {
     }
 }
 
-const initialInterval = intervalSelect.value
-const initialData = projectStatistics[initialInterval]
+const createStatisticsChart = (container) => {
+    const statisticsElement = document.getElementById(
+        container.dataset.statisticsId
+    )
+    const intervalSelect = container.querySelector('.statistics-interval')
+    const startDateInput = container.querySelector('.statistics-start-date')
+    const endDateInput = container.querySelector('.statistics-end-date')
+    const clearDatesButton = container.querySelector('.statistics-clear-dates')
+    const totalElement = container.querySelector('.statistics-total')
+    const chartElement = container.querySelector('.statistics-chart')
 
-const projectStatisticsChart = new Chart(chartElement, {
-    type: 'bar',
+    const statistics = JSON.parse(statisticsElement.textContent)
+    const storageKey = container.dataset.storageKey
+    const storedInterval = localStorage.getItem(storageKey)
 
-    data: {
-        labels: getLabels(initialInterval),
-        datasets: [
-            {
-                label: 'Number of Projects',
-                data: initialData.values,
-                backgroundColor: '#7eafe0',
-                borderWidth: 0,
-                barPercentage: 0.85,
-                categoryPercentage: 0.85
-            }
-        ]
-    },
+    if (storedInterval) {
+        intervalSelect.value = storedInterval
+    }
 
-    plugins: [
-        valueLabelsPlugin
-    ],
+    const filters = {
+        interval: intervalSelect.value,
+        start: startDateInput.value,
+        end: endDateInput.value
+    }
 
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
+    const initialData = getFilteredChartData(statistics, filters)
 
-        layout: {
-            padding: {
-                top: 20
-            }
+    updateClearDatesButton(clearDatesButton, filters)
+    updateTotal(totalElement, initialData)
+
+    const chart = new Chart(chartElement, {
+        type: 'bar',
+
+        data: {
+            labels: getLabels(initialData, filters.interval),
+            datasets: [
+                {
+                    label: container.dataset.datasetLabel,
+                    data: initialData.values,
+                    backgroundColor: container.dataset.barColor,
+                    borderWidth: 0,
+                    barPercentage: 0.85,
+                    categoryPercentage: 0.85
+                }
+            ]
         },
 
-        plugins: {
-            legend: {
-                display: false
+        plugins: [
+            drawValueLabelsPlugin
+        ],
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+
+            layout: {
+                padding: {
+                    top: 20
+                }
             },
 
-            tooltip: {
-                displayColors: false
-            }
-        },
-
-        scales: {
-            x: {
-                title: {
-                    display: true,
-                    text: 'Created'
-                },
-
-                grid: {
+            plugins: {
+                legend: {
                     display: false
                 },
 
-                ticks: {
-                    maxRotation: getTickRotation(initialInterval),
-                    minRotation: getTickRotation(initialInterval)
+                tooltip: {
+                    displayColors: false
                 }
             },
 
-            y: {
-                beginAtZero: true,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: container.dataset.xAxisTitle
+                    },
 
-                title: {
-                    display: true,
-                    text: 'Total number of projects'
+                    grid: {
+                        display: false
+                    },
+
+                    ticks: {
+                        maxRotation: getTickRotation(filters.interval),
+                        minRotation: getTickRotation(filters.interval)
+                    }
                 },
 
-                ticks: {
-                    precision: 0
+                y: {
+                    beginAtZero: true,
+
+                    title: {
+                        display: true,
+                        text: container.dataset.yAxisTitle
+                    },
+
+                    ticks: {
+                        precision: 0
+                    }
                 }
             }
         }
+    })
+
+    const updateChart = () => {
+        const data = getFilteredChartData(statistics, filters)
+
+        updateBarChart(chart, data, filters.interval)
+        updateTotal(totalElement, data)
     }
-})
 
-intervalSelect.addEventListener('change', () => {
-    const interval = intervalSelect.value
+    intervalSelect.addEventListener('change', () => {
+        filters.interval = intervalSelect.value
+        localStorage.setItem(storageKey, filters.interval)
+        updateChart()
+    })
 
-    localStorage.setItem(
-      'project-statistics-interval',
-      interval
-    )
-    const data = projectStatistics[interval]
+    startDateInput.addEventListener('change', () => {
+        filters.start = startDateInput.value
+        updateClearDatesButton(clearDatesButton, filters)
+        updateChart()
+    })
 
-    projectStatisticsChart.data.labels = getLabels(interval)
-    projectStatisticsChart.data.datasets[0].data = data.values
+    endDateInput.addEventListener('change', () => {
+        filters.end = endDateInput.value
+        updateClearDatesButton(clearDatesButton, filters)
+        updateChart()
+    })
 
-    projectStatisticsChart.options.scales.x.ticks.maxRotation =
-    getTickRotation(interval)
+    clearDatesButton.addEventListener('click', () => {
+        startDateInput.value = ''
+        endDateInput.value = ''
+        filters.start = ''
+        filters.end = ''
 
-    projectStatisticsChart.options.scales.x.ticks.minRotation =
-    getTickRotation(interval)
+        updateClearDatesButton(clearDatesButton, filters)
+        updateChart()
+    })
+}
 
-    projectStatisticsChart.update()
-})
+document.querySelectorAll('[data-statistics-chart]').forEach(
+    createStatisticsChart
+)
