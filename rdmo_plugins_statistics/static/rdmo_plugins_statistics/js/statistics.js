@@ -120,7 +120,7 @@ const statisticsTypes = {
 
     category: {
         getRows: (statistics) => {
-            return statistics.rows
+            return [...statistics.rows].sort((a, b) => b.value - a.value)
         },
 
         getDisplayLabel: (row) => {
