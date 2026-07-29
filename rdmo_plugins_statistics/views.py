@@ -3,13 +3,13 @@
 
 # def statistics(request):
 #     return render(request, 'rdmo_plugins_statistics/statistics.html')
+from django.contrib.auth.decorators import permission_required
 from django.db.models import Count
 from django.db.models.functions import TruncDay, TruncMonth, TruncQuarter, TruncYear
 from django.shortcuts import render
 
 from rdmo.projects.models import Project
 
-from django.contrib.auth.decorators import permission_required
 
 def get_project_statistics(truncation):
     queryset = (

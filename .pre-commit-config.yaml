@@ -9,7 +9,9 @@ repos:
     rev: v4.6.0
     hooks:
       - id: check-ast
-      - id: check-xml
+      # No XML files in this repository.
+      # Uncomment if XML files are added in the future.
+      # - id: check-xml
       - id: check-yaml
       - id: end-of-file-fixer
         exclude: \.html$|\.txt$
