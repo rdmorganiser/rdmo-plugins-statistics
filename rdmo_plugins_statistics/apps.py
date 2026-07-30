@@ -11,5 +11,6 @@ class StatisticsConfig(AppConfig):
             'label': _('Statistics'),
             'url_name': 'statistics:index',
             'order': 100,
+            # 'permission': 'projects.view_project'
         },
     )

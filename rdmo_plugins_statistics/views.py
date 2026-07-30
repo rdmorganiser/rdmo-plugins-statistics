@@ -1,7 +1,6 @@
+from django.apps import apps
 from django.contrib.auth import get_user_model
-
-# from django.contrib.auth.decorators import permission_required
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.sites.models import Site
 from django.db.models import Count, Q
 from django.db.models.functions import TruncDay
@@ -104,8 +103,17 @@ def get_catalog_statistics(current_site):
         ],
     }
 
-# @permission_required('projects.view_project', raise_exception=True)
-@login_required
+permission = apps.get_app_config(
+    'rdmo_plugins_statistics'
+).navigation_items[0].get('permission')
+
+if permission is None:
+    access_required = login_required
+else:
+    access_required = permission_required(permission, raise_exception=True)
+
+
+@access_required
 def statistics(request):
     try:
       get_template('core/bs53/base.html')
