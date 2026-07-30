@@ -4,4 +4,12 @@ from django.utils.translation import gettext_lazy as _
 
 class StatisticsConfig(AppConfig):
     name = 'rdmo_plugins_statistics'
-    verbose_name = _('Statistics')
+
+    navigation_items = (
+        {
+            'name': 'statistics',
+            'label': _('Statistics'),
+            'url_name': 'statistics:index',
+            'order': 100,
+        },
+    )

@@ -1,35 +1,37 @@
-{% load static i18n %}
+{% extends base_template %}
+{% load static %}
+{% load i18n %}
 
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-
-    <title>{% translate "Statistics" %}</title>
-
+{% block css %}
+    {{ block.super }}
     <link
         rel="stylesheet"
         href="{% static 'rdmo_plugins_statistics/css/statistics.css' %}"
     >
-</head>
+{% endblock %}
 
-<body>
+{% block content %}
 
 <div class="statistics-page">
 
-    <h1>{% translate "Statistics" %}</h1>
+    <!-- <h1>{% translate "Statistics" %}</h1> -->
+    <h1>
+        {% blocktranslate with site_name=current_site.name %}
+            Statistics for {{ site_name }}
+        {% endblocktranslate %}
+    </h1>
 
-    <section
-        class="statistics-section"
-        data-statistics-chart
-        data-statistics-type="time"
-        data-statistics-id="project-statistics-data"
-        data-storage-key="project-statistics-interval"
-        data-dataset-label="{% translate 'Number of projects' %}"
-        data-x-axis-title="{% translate 'Created' %}"
-        data-y-axis-title="{% translate 'Total number of projects' %}"
-        data-bar-color="#7eafe0"
-    >
+        <section
+          class="statistics-section"
+          data-statistics-chart
+          data-statistics-type="time"
+          data-statistics-id="project-statistics-data"
+          data-storage-key="project-statistics-interval"
+          data-dataset-label="{% translate 'Number of projects' %}"
+          data-x-axis-title="{% translate 'Created' %}"
+          data-y-axis-title="{% translate 'Total number of projects' %}"
+          data-bar-color="#7eafe0"
+        >
         <h2>{% translate "Number of projects" %}</h2>
 
         <div class="statistics-chart-card">
@@ -201,8 +203,16 @@
 {{ user_statistics|json_script:"user-statistics-data" }}
 {{ catalog_statistics|json_script:"catalog-statistics-data" }}
 
-<script src="{% static 'rdmo_plugins_statistics/js/chart-4.5.1.umd.min.js' %}"></script>
-<script src="{% static 'rdmo_plugins_statistics/js/statistics.js' %}"></script>
+{% endblock %}
 
-</body>
-</html>
+{% block js %}
+    {{ block.super }}
+    <script
+        defer
+        src="{% static 'rdmo_plugins_statistics/js/chart-4.5.1.umd.min.js' %}"
+    ></script>
+    <script
+        defer
+        src="{% static 'rdmo_plugins_statistics/js/statistics.js' %}"
+    ></script>
+{% endblock %}
