@@ -41,11 +41,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ci = [
-  "rdmo-plugins[ci]",
-]
 dev = [
-  "rdmo-plugins[dev]"
+  "pre-commit",
 ]
 
 [project.urls]
