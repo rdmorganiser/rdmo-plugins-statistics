@@ -45,9 +45,12 @@ const getLabelTickRotation = (container, defaultTickRotation) => {
 }
 
 const truncateLabel = (label, maxLength = 20) => {
-    return label.length > maxLength
-        ? `${label.slice(0, maxLength - 1)}...`
-        : label
+    const suffix = label.endsWith(' *') ? ' *' : ''
+    const text = suffix ? label.slice(0, -suffix.length) : label
+
+    return text.length > maxLength
+        ? `${text.slice(0, maxLength - 3)}...${suffix}`
+        : `${text}${suffix}`
 }
 
 const fillMissingPeriods = (rows, interval) => {
