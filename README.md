@@ -80,6 +80,41 @@ and add the following permission check where the navigation entry should appear:
 
 The plugin registers the `statistics.view_statistics` permission using the Django Rules framework. The same permission is enforced by the Statistics view.
 
+## Configuration
+
+The plugin provides sensible defaults and works without additional configuration.
+
+The default chart configuration is:
+
+```python
+RDMO_STATISTICS = {
+    'projects': {
+        'bar_color': '#7eafe0',
+        'fill_gaps': True,
+        'label_orientation': 'auto',
+    },
+    'users': {
+        'bar_color': '#65c5c4',
+        'fill_gaps': False,
+        'label_orientation': 'auto',
+    },
+    'catalogs': {
+        'bar_color': '#a8d37d',
+        'orientation': 'horizontal',
+        'label_orientation': 'horizontal',
+    },
+}
+```
+
+The chart configuration can be overridden in `rdmo-app/config/settings/local.py` using the optional `RDMO_STATISTICS` setting. Only the values that should differ from the defaults need to be specified.
+
+Currently, the following configuration options are supported:
+
+- `bar_color`
+- `fill_gaps` (time-based charts)
+- `orientation` (catalog chart)
+- `label_orientation`
+
 ## Displayed Statistics
 
 ### Projects

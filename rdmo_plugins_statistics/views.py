@@ -1,4 +1,7 @@
+from copy import deepcopy
+
 from django.apps import apps
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.sites.models import Site
@@ -84,10 +87,17 @@ class StatisticsView(PermissionRequiredMixin, TemplateView):
         User = get_user_model()
         current_site = Site.objects.get_current()
 
+        config = deepcopy(DEFAULT_STATISTICS_CONFIG)
+
+        custom_config = getattr(settings, 'RDMO_STATISTICS', {})
+
+        for section, values in custom_config.items():
+            config[section].update(values)
+
         context.update({
             'base_template': base_template,
             'current_site': current_site,
-            'statistics_config': DEFAULT_STATISTICS_CONFIG,
+            'statistics_config': config,
             'project_statistics': get_time_statistics(
                 Project.objects.filter(site=current_site),
                 'created',
