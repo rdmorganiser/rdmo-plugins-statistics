@@ -65,3 +65,9 @@ body {
   position: relative;
   height: 340px;
 }
+
+.statistics-chart-note {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: #6c757d;
+}

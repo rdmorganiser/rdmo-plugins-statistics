@@ -56,6 +56,7 @@ def get_catalog_statistics(current_site):
                 'key': catalog.id,
                 'label': catalog.title,
                 'value': catalog.count,
+                **({'label_suffix': ' *'} if not catalog.available else {}),
             }
             for catalog in statistics
         ],

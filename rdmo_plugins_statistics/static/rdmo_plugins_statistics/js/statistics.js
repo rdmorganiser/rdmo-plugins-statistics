@@ -184,7 +184,7 @@ const statisticsTypes = {
         },
 
         getDisplayLabel: (row) => {
-            return row.label
+            return `${row.label}${row.label_suffix || ''}`
         },
 
         getTickRotation: () => {
