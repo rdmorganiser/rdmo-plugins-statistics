@@ -50,7 +50,50 @@ const truncateLabel = (label, maxLength = 20) => {
         : label
 }
 
-const getTimeChartRows = (statistics, filters) => {
+const fillMissingPeriods = (rows, interval) => {
+    if (rows.length === 0) {
+        return rows
+    }
+
+    const rowsByKey = new Map(rows.map((row) => [row.key, row]))
+    const result = []
+
+    const current = new Date(`${rows[0].key}T00:00:00Z`)
+    const end = new Date(`${rows.at(-1).key}T00:00:00Z`)
+
+    while (current <= end) {
+        const key = current.toISOString().slice(0, 10)
+
+        result.push(
+            rowsByKey.get(key) || {
+                key,
+                label: key,
+                value: 0
+            }
+        )
+
+        switch (interval) {
+            case 'year':
+                current.setUTCFullYear(current.getUTCFullYear() + 1)
+                break
+
+            case 'quarter':
+                current.setUTCMonth(current.getUTCMonth() + 3)
+                break
+
+            case 'month':
+                current.setUTCMonth(current.getUTCMonth() + 1)
+                break
+
+            default:
+                current.setUTCDate(current.getUTCDate() + 1)
+        }
+    }
+
+    return result
+}
+
+const getTimeChartRows = (statistics, filters, container) => {
     const groupedRows = new Map()
 
     statistics.day.rows.forEach((row) => {
@@ -100,8 +143,25 @@ const getTimeChartRows = (statistics, filters) => {
         }
     })
 
-    return Array.from(groupedRows.values())
-}
+    let rows = Array.from(groupedRows.values())
+
+    if (container.dataset.fillGaps === 'true') {
+        rows = fillMissingPeriods(rows, filters.interval)
+    }
+
+    if (!filters.start && !filters.end) {
+        const periodLimits = {
+            day: 31,
+            month: 24,
+            quarter: 20,
+            year: 20
+        }
+
+        return rows.slice(-periodLimits[filters.interval])
+    }
+
+    return rows
+    }
 
 const statisticsTypes = {
     time: {
@@ -134,7 +194,7 @@ const statisticsTypes = {
 }
 
 const prepareChartData = (statisticsType, statistics, filters, container) => {
-    const rows = statisticsType.getRows(statistics, filters)
+    const rows = statisticsType.getRows(statistics, filters, container)
     const defaultTickRotation = statisticsType.getTickRotation(filters)
 
     return {
