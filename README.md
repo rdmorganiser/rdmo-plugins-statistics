@@ -130,7 +130,7 @@ Then remove both plugin references from the RDMO configuration:
 2. Remove `path('statistics/', include('rdmo_plugins_statistics.urls'))` from `urlpatterns`.
 3. Remove the Statistics navigation entry from your theme override (`rdmo_theme/templates/core/base_navigation.html`).
 
-Both entries must be removed. Otherwise, Django will still try to import the uninstalled package and the application will not start.
+All entries must be removed. Otherwise, Django will still try to import the uninstalled package and the application will not start.
 
 ## License
 
