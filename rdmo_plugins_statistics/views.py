@@ -5,65 +5,14 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.sites.models import Site
-from django.db.models import Count, Q
-from django.db.models.functions import TruncDay
 from django.template import TemplateDoesNotExist
 from django.template.loader import get_template
 from django.views.generic import TemplateView
 
 from rdmo.projects.models import Project
-from rdmo.questions.models import Catalog
 
 from .config import DEFAULT_STATISTICS_CONFIG
-
-
-def get_time_statistics(queryset, date_field):
-    statistics = (
-        queryset
-        .annotate(period=TruncDay(date_field))
-        .values('period')
-        .annotate(count=Count('id'))
-        .order_by('period')
-    )
-
-    return {
-        'day': {
-            'rows': [
-                {
-                    'key': item['period'].isoformat(),
-                    'label': item['period'].isoformat(),
-                    'value': item['count'],
-                }
-                for item in statistics
-            ],
-        },
-    }
-
-
-def get_catalog_statistics(current_site):
-    statistics = (
-        Catalog.objects
-        .filter(sites=current_site)
-        .annotate(
-            count=Count(
-                'projects',
-                filter=Q(projects__site=current_site),
-            )
-        )
-        .order_by('id')
-    )
-
-    return {
-        'rows': [
-            {
-                'key': catalog.id,
-                'label': catalog.title,
-                'value': catalog.count,
-                **({'label_suffix': ' *'} if not catalog.available else {}),
-            }
-            for catalog in statistics
-        ],
-    }
+from .utils import get_catalog_statistics, get_time_statistics
 
 
 class StatisticsView(PermissionRequiredMixin, TemplateView):
