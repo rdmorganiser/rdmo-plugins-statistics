@@ -325,46 +325,6 @@ const createStatisticsChart = (container) => {
                 }
             },
 
-            // scales: {
-            //     x: {
-            //         beginAtZero: isHorizontal,
-
-            //         title: {
-            //             display: true,
-            //             text: container.dataset.xAxisTitle
-            //         },
-
-            //         grid: {
-            //             display: isHorizontal,
-            //         },
-
-            //         ticks: {
-            //             minRotation: initialData.tickRotation.min,
-            //             maxRotation: initialData.tickRotation.max,
-
-            //             callback(value) {
-            //                 const label = this.getLabelForValue(value)
-
-            //                 return container.dataset.labelOrientation === 'vertical'
-            //                     ? truncateLabel(label)
-            //                     : label
-            //             }
-            //         }
-            //     },
-
-            //     y: {
-            //         beginAtZero: !isHorizontal,
-
-            //         title: {
-            //             display: true,
-            //             text: container.dataset.yAxisTitle
-            //         },
-
-            //         ticks: {
-            //             precision: 0
-            //         }
-            //     }
-            // }
             scales: {
               x: {
                   beginAtZero: isHorizontal,

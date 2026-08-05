@@ -11,6 +11,9 @@ class StatisticsConfig(AppConfig):
             'label': _('Statistics'),
             'url_name': 'statistics:index',
             'order': 100,
-            # 'permission': 'projects.view_project'
+            'permission': 'statistics.view_statistics',
         },
     )
+
+    def ready(self):
+      from . import rules  # noqa: F401
