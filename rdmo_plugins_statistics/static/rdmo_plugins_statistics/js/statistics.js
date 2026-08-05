@@ -235,7 +235,18 @@ const drawValueLabelsPlugin = {
             const meta = chart.getDatasetMeta(datasetIndex)
 
             meta.data.forEach((bar, index) => {
-                ctx.fillText(dataset.data[index], bar.x, bar.y - 5)
+                const value = dataset.data[index]
+                const isHorizontal = chart.options.indexAxis === 'y'
+
+                if (isHorizontal) {
+                    ctx.textAlign = 'left'
+                    ctx.textBaseline = 'middle'
+                    ctx.fillText(value, bar.x + 6, bar.y)
+                } else {
+                    ctx.textAlign = 'center'
+                    ctx.textBaseline = 'bottom'
+                    ctx.fillText(value, bar.x, bar.y - 5)
+                }
             })
         })
 
@@ -371,7 +382,8 @@ const createStatisticsChart = (container) => {
 
             layout: {
                 padding: {
-                    top: 20
+                    top: 20,
+                    right: isHorizontal ? 30 : 0
                 }
             },
 
