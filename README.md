@@ -14,9 +14,9 @@ The statistics page currently provides:
 - A displayed total for the currently selected time range
 - Persistent interval selection for the project and user charts using browser storage
 
-The page is available only to authenticated users.
+Access to the statistics page is controlled by the statistics.view_statistics permission.
 
-Project and catalog statistics are restricted to the current Django site. User registrations are counted across all users.
+Project, catalog statistics and user registrations are restricted to the current Django site.
 
 ## Requirements
 
@@ -50,29 +50,35 @@ urlpatterns += [
 ]
 ```
 
+If you are using the default RDMO navigation, also create a theme override for `core/base_navigation.html` and add a navigation entry for the Statistics page as described below.
+
 Restart the RDMO application after changing the configuration.
 
 ## Navigation
 
-The plugin registers a Statistics entry through its Django `AppConfig`:
+To add the Statistics page to the RDMO navigation, override the navigation template in your RDMO application theme.
 
-```python
-class StatisticsConfig(AppConfig):
-    name = 'rdmo_plugins_statistics'
+Create an override for:
 
-    navigation_items = (
-        {
-            'name': 'statistics',
-            'label': _('Statistics'),
-            'url_name': 'statistics:index',
-            'order': 100,
-        },
-    )
+```
+rdmo_theme/templates/core/base_navigation.html
 ```
 
-The entry is displayed when the installed RDMO version supports plugin-provided navigation items.
+and add the following permission check where the navigation entry should appear:
 
-The page itself remains available at `/statistics/` as long as the URL configuration is registered.
+```django
+{% has_perm 'statistics.view_statistics' request.user as can_view_statistics %}
+
+{% if can_view_statistics %}
+<li>
+    <a href="{% url 'statistics:index' %}">
+        {% trans 'Statistics' %}
+    </a>
+</li>
+{% endif %}
+```
+
+The plugin registers the `statistics.view_statistics` permission using the Django Rules framework. The same permission is enforced by the Statistics view.
 
 ## Displayed Statistics
 
@@ -122,6 +128,7 @@ Then remove both plugin references from the RDMO configuration:
 
 1. Remove `'rdmo_plugins_statistics'` from `INSTALLED_APPS`.
 2. Remove `path('statistics/', include('rdmo_plugins_statistics.urls'))` from `urlpatterns`.
+3. Remove the Statistics navigation entry from your theme override (`rdmo_theme/templates/core/base_navigation.html`).
 
 Both entries must be removed. Otherwise, Django will still try to import the uninstalled package and the application will not start.
 
