@@ -323,10 +323,64 @@ const addTimeChartListeners = (controls, updateChart) => {
     })
 }
 
+const downloadCsv = (container, filters, preparedData) => {
+    const isHorizontal = container.dataset.chartOrientation === 'horizontal'
+
+    const headers = [
+        isHorizontal
+            ? container.dataset.yAxisTitle
+            : container.dataset.xAxisTitle,
+        container.dataset.datasetLabel
+    ]
+
+    const rows = preparedData.displayLabels.map((label, index) => [
+        label,
+        preparedData.rows[index].value
+    ])
+
+    const csvRows = [
+        headers,
+        ...rows
+    ]
+
+    const csv = csvRows
+        .map((row) => (
+            row
+                .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+                .join(',')
+        ))
+        .join('\n')
+
+    const name = container.dataset.statisticsId
+        .replace('-statistics-data', '')
+
+    const range = filters.start || filters.end
+        ? `${filters.start || 'start'}-${filters.end || 'end'}`
+        : 'all'
+
+    const filename = filters.interval
+        ? `statistics-${name}-${filters.interval}-${range}.csv`
+        : `statistics-${name}.csv`
+
+    const blob = new Blob([csv], {
+        type: 'text/csv;charset=utf-8'
+    })
+
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+
+    link.href = url
+    link.download = filename
+    link.click()
+
+    URL.revokeObjectURL(url)
+}
+
 const createStatisticsChart = (container) => {
     const statisticsElement = document.getElementById(container.dataset.statisticsId)
     const chartElement = container.querySelector('.statistics-chart')
     const totalElement = container.querySelector('.statistics-total')
+    const exportButton = container.querySelector('.statistics-export-csv')
     const statistics = JSON.parse(statisticsElement.textContent)
 
     const statisticsTypeName = container.dataset.statisticsType
@@ -345,6 +399,12 @@ const createStatisticsChart = (container) => {
 
     const getPreparedData = () => {
         return prepareChartData(statisticsType, statistics, filters, container)
+    }
+
+    if (exportButton) {
+        exportButton.addEventListener('click', () => {
+            downloadCsv(container, filters, getPreparedData())
+        })
     }
 
     const initialData = getPreparedData()

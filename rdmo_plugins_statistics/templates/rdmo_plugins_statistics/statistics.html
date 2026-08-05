@@ -39,6 +39,12 @@
             <div class="statistics-chart-controls">
                 <button
                     type="button"
+                    class="btn btn-outline-secondary statistics-export-csv"
+                >
+                    {% translate "Export CSV" %}
+                </button>
+                <button
+                    type="button"
                     class="btn btn-outline-secondary statistics-clear-dates"
                 >
                     {% translate "Clear dates" %}
@@ -107,6 +113,12 @@
 
         <div class="statistics-chart-card">
             <div class="statistics-chart-controls">
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary statistics-export-csv"
+                >
+                    {% translate "Export CSV" %}
+                </button>
                 <button
                     type="button"
                     class="btn btn-outline-secondary statistics-clear-dates"
@@ -201,6 +213,12 @@
         <h2>{% translate 'Catalog usage' %}</h2>
 
         <div class="statistics-chart-card">
+            <button
+                type="button"
+                class="btn btn-outline-secondary statistics-export-csv"
+            >
+                {% translate "Export CSV" %}
+            </button>
             <div class="statistics-chart-container">
                 <canvas class="statistics-chart"></canvas>
             </div>
