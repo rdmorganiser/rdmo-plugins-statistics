@@ -1,9 +1,9 @@
 from django.urls import path
 
-from ..views import statistics
+from ..views import StatisticsView
 
 app_name = 'statistics'
 
 urlpatterns = [
-    path('', statistics, name='index'),
+    path('', StatisticsView.as_view(), name='index'),
 ]
