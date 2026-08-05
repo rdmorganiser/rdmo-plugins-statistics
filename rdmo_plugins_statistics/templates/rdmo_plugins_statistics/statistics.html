@@ -29,8 +29,9 @@
           data-dataset-label="{% translate 'Number of projects' %}"
           data-x-axis-title="{% translate 'Created' %}"
           data-y-axis-title="{% translate 'Number of projects' %}"
-          data-bar-color="#7eafe0"
-          data-fill-gaps="true"
+          data-bar-color="{{ statistics_config.projects.bar_color }}"
+          data-fill-gaps="{{ statistics_config.projects.fill_gaps|yesno:'true,false' }}"
+          data-label-orientation="{{ statistics_config.projects.label_orientation }}"
         >
         <h2>{% translate "Number of projects" %}</h2>
 
@@ -98,7 +99,9 @@
         data-dataset-label="{% translate 'Number of registered users' %}"
         data-x-axis-title="{% translate 'Registered' %}"
         data-y-axis-title="{% translate 'Number of registered users' %}"
-        data-bar-color="#65c5c4"
+        data-bar-color="{{ statistics_config.users.bar_color }}"
+        data-fill-gaps="{{ statistics_config.users.fill_gaps|yesno:'true,false' }}"
+        data-label-orientation="{{ statistics_config.users.label_orientation }}"
     >
         <h2>{% translate "Number of registered users" %}</h2>
 
@@ -166,8 +169,9 @@
         data-dataset-label="{% translate 'Number of projects' %}"
         data-x-axis-title="{% translate 'Catalog' %}"
         data-y-axis-title="{% translate 'Number of projects' %}"
-        data-bar-color="#a8d37d"
+        data-bar-color="{{ statistics_config.catalogs.bar_color }}"
         data-label-orientation="vertical"
+        data-chart-orientation="vertical"
     >
         <h2>{% translate "Catalog usage" %}</h2>
 
@@ -190,8 +194,9 @@
         data-dataset-label="{% translate 'Number of projects' %}"
         data-x-axis-title="{% translate 'Number of projects' %}"
         data-y-axis-title="{% translate 'Catalog' %}"
-        data-bar-color="#a8d37d"
-        data-chart-orientation="horizontal"
+        data-bar-color="{{ statistics_config.catalogs.bar_color }}"
+        data-label-orientation="{{ statistics_config.catalogs.label_orientation }}"
+        data-chart-orientation="{{ statistics_config.catalogs.orientation }}"
     >
         <h2>{% translate 'Catalog usage' %}</h2>
 

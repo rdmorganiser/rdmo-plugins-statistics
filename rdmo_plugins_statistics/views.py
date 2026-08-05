@@ -11,6 +11,8 @@ from django.views.generic import TemplateView
 from rdmo.projects.models import Project
 from rdmo.questions.models import Catalog
 
+from .config import DEFAULT_STATISTICS_CONFIG
+
 
 def get_time_statistics(queryset, date_field):
     statistics = (
@@ -60,6 +62,7 @@ def get_catalog_statistics(current_site):
         ],
     }
 
+
 class StatisticsView(PermissionRequiredMixin, TemplateView):
     template_name = 'rdmo_plugins_statistics/statistics.html'
     permission_required = (
@@ -84,6 +87,7 @@ class StatisticsView(PermissionRequiredMixin, TemplateView):
         context.update({
             'base_template': base_template,
             'current_site': current_site,
+            'statistics_config': DEFAULT_STATISTICS_CONFIG,
             'project_statistics': get_time_statistics(
                 Project.objects.filter(site=current_site),
                 'created',
