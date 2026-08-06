@@ -76,8 +76,6 @@ class StatisticsView(PermissionRequiredMixin, TemplateView):
                 **settings.get(name, {}),
                 'statistics': get_time_statistics(statistics),
                 'total': queryset.count(),
-                'statistics_id': f"{definition['key']}-statistics-data",
-                'storage_key': f"{definition['key']}-statistics-interval",
             })
 
         catalog_statistics = (

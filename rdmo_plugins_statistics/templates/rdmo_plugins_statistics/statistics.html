@@ -21,12 +21,13 @@
     </h1>
 
     {% for chart in time_charts %}
+      {% with statistics_id=chart.key|add:"-statistics-data" storage_key=chart.key|add:"-statistics-interval" %}
         <section
             class="statistics-section"
             data-statistics-chart
             data-statistics-type="{{ chart.type }}"
-            data-statistics-id="{{ chart.statistics_id }}"
-            data-storage-key="{{ chart.storage_key }}"
+            data-statistics-id="{{ statistics_id }}"
+            data-storage-key="{{ storage_key }}"
             data-dataset-label="{{ chart.dataset_label }}"
             data-x-axis-title="{{ chart.x_axis_title }}"
             data-y-axis-title="{{ chart.y_axis_title }}"
@@ -104,6 +105,7 @@
                 </div>
             </div>
         </section>
+      {% endwith %}
     {% endfor %}
 
     <!-- Catalogs vertical -->
@@ -166,7 +168,9 @@
 </div>
 
 {% for chart in time_charts %}
-    {{ chart.statistics|json_script:chart.statistics_id }}
+    {% with statistics_id=chart.key|add:"-statistics-data" %}
+        {{ chart.statistics|json_script:statistics_id }}
+    {% endwith %}
 {% endfor %}
 {{ catalog_statistics|json_script:"catalog-statistics-data" }}
 
