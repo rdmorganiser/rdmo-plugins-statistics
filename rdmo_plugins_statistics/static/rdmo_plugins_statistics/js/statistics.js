@@ -53,27 +53,30 @@ const truncateLabel = (label, maxLength = 20) => {
         : `${text}${suffix}`
 }
 
-const fillMissingPeriods = (rows, interval) => {
+const fillMissingPeriods = (rows, interval, calculation) => {
     if (rows.length === 0) {
         return rows
     }
 
     const rowsByKey = new Map(rows.map((row) => [row.key, row]))
     const result = []
+    let previousValue = 0
 
     const current = new Date(`${rows[0].key}T00:00:00Z`)
     const end = new Date(`${rows.at(-1).key}T00:00:00Z`)
 
     while (current <= end) {
         const key = current.toISOString().slice(0, 10)
+        const row = rowsByKey.get(key) || {
+            key,
+            label: key,
+            value: calculation === 'cumulative_count'
+                ? previousValue
+                : 0,
+        }
 
-        result.push(
-            rowsByKey.get(key) || {
-                key,
-                label: key,
-                value: 0
-            }
-        )
+        result.push(row)
+        previousValue = row.value
 
         switch (interval) {
             case 'year':
@@ -94,6 +97,15 @@ const fillMissingPeriods = (rows, interval) => {
     }
 
     return result
+}
+
+const timeCalculations = {
+    period_count: {
+        combine: (current, next) => current + next,
+    },
+    cumulative_count: {
+        combine: (_current, next) => next,
+    },
 }
 
 const getTimeChartRows = (statistics, filters, container) => {
@@ -133,10 +145,14 @@ const getTimeChartRows = (statistics, filters, container) => {
                 period = date
         }
 
+        const calculation = timeCalculations[container.dataset.calculation]
         const currentRow = groupedRows.get(period)
 
         if (currentRow) {
-            currentRow.value += row.value
+                currentRow.value = calculation.combine(
+                currentRow.value,
+                row.value,
+            )
         } else {
             groupedRows.set(period, {
                 key: period,
@@ -149,7 +165,11 @@ const getTimeChartRows = (statistics, filters, container) => {
     let rows = Array.from(groupedRows.values())
 
     if (container.dataset.fillGaps === 'true') {
-        rows = fillMissingPeriods(rows, filters.interval)
+        rows = fillMissingPeriods(
+            rows,
+            filters.interval,
+            container.dataset.calculation,
+        )
     }
 
     if (!filters.start && !filters.end) {

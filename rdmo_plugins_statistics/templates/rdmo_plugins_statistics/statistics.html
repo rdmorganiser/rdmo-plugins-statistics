@@ -34,6 +34,7 @@
             data-bar-color="{{ chart.bar_color }}"
             data-fill-gaps="{{ chart.empty_periods|yesno:'true,false' }}"
             data-label-orientation="{{ chart.label_orientation }}"
+            data-calculation="{{ chart.calculation }}"
         >
             <h2>{{ chart.title }}</h2>
 
@@ -88,10 +89,12 @@
                     </select>
 
                     <div class="project-statistics-total">
+                    {% if chart.calculation != 'cumulative_count' %}
                         <span>
                             <strong>{% translate "Total in displayed period" %}:</strong>
                             <span class="statistics-total"></span>
                         </span>
+                    {% endif %}
 
                         <span>
                             <strong>{% translate "Total in system" %}:</strong>

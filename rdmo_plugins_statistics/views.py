@@ -71,10 +71,22 @@ class StatisticsView(PermissionRequiredMixin, TemplateView):
                 .order_by('period')
             )
 
+            calculation = definition['calculation']
+
+            if calculation not in {'period_count', 'cumulative_count'}:
+                raise ValueError(
+                    f'Unsupported time chart calculation: {calculation}'
+                )
+
+            statistics_data = get_time_statistics(
+                statistics,
+                calculation,
+            )
+
             time_charts.append({
                 **definition,
                 **settings.get(name, {}),
-                'statistics': get_time_statistics(statistics),
+                'statistics': statistics_data,
                 'total': queryset.count(),
             })
 
