@@ -5,11 +5,14 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.sites.models import Site
+from django.db.models import Count, Q
+from django.db.models.functions import TruncDay
 from django.template import TemplateDoesNotExist
 from django.template.loader import get_template
 from django.views.generic import TemplateView
 
 from rdmo.projects.models import Project
+from rdmo.questions.models import Catalog
 
 from .config import DEFAULT_STATISTICS_CONFIG
 from .utils import get_catalog_statistics, get_time_statistics
@@ -46,21 +49,45 @@ class StatisticsView(PermissionRequiredMixin, TemplateView):
         project_queryset = Project.objects.filter(site=current_site)
         user_queryset = User.objects.filter(role__member=current_site)
 
+        project_statistics = (
+            project_queryset
+            .annotate(period=TruncDay('created'))
+            .values('period')
+            .annotate(count=Count('id'))
+            .values_list('period', 'count')
+            .order_by('period')
+        )
+
+        user_statistics = (
+            user_queryset
+            .annotate(period=TruncDay('date_joined'))
+            .values('period')
+            .annotate(count=Count('id'))
+            .values_list('period', 'count')
+            .order_by('period')
+        )
+
+        catalog_statistics = (
+            Catalog.objects
+            .filter(sites=current_site)
+            .annotate(
+                count=Count(
+                    'projects',
+                    filter=Q(projects__site=current_site),
+                )
+            )
+            .order_by('id')
+        )
+
         context.update({
             'base_template': base_template,
             'current_site': current_site,
             'statistics_config': config,
-            'project_statistics': get_time_statistics(
-                project_queryset,
-                'created',
-            ),
+            'project_statistics': get_time_statistics(project_statistics),
             'project_total': project_queryset.count(),
-            'user_statistics': get_time_statistics(
-                user_queryset,
-                'date_joined',
-            ),
+            'user_statistics': get_time_statistics(user_statistics),
             'user_total': user_queryset.count(),
-            'catalog_statistics': get_catalog_statistics(current_site),
+            'catalog_statistics': get_catalog_statistics(catalog_statistics),
         })
 
         return context
