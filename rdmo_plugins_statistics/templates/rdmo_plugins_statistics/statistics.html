@@ -20,171 +20,91 @@
         {% endblocktranslate %}
     </h1>
 
+    {% for chart in time_charts %}
         <section
-          class="statistics-section"
-          data-statistics-chart
-          data-statistics-type="time"
-          data-statistics-id="project-statistics-data"
-          data-storage-key="project-statistics-interval"
-          data-dataset-label="{% translate 'Number of projects' %}"
-          data-x-axis-title="{% translate 'Created' %}"
-          data-y-axis-title="{% translate 'Number of projects' %}"
-          data-bar-color="{{ statistics_config.projects.bar_color }}"
-          data-fill-gaps="{{ statistics_config.projects.empty_periods|yesno:'true,false' }}"
-          data-label-orientation="{{ statistics_config.projects.label_orientation }}"
+            class="statistics-section"
+            data-statistics-chart
+            data-statistics-type="{{ chart.type }}"
+            data-statistics-id="{{ chart.statistics_id }}"
+            data-storage-key="{{ chart.storage_key }}"
+            data-dataset-label="{{ chart.dataset_label }}"
+            data-x-axis-title="{{ chart.x_axis_title }}"
+            data-y-axis-title="{{ chart.y_axis_title }}"
+            data-bar-color="{{ chart.bar_color }}"
+            data-fill-gaps="{{ chart.empty_periods|yesno:'true,false' }}"
+            data-label-orientation="{{ chart.label_orientation }}"
         >
-        <h2>{% translate "Number of projects" %}</h2>
+            <h2>{{ chart.title }}</h2>
 
-        <div class="statistics-chart-card">
-            <div class="statistics-chart-controls">
-                <button
-                    type="button"
-                    class="btn btn-outline-secondary statistics-export-csv"
-                >
-                    {% translate "Export CSV" %}
-                </button>
-                <button
-                    type="button"
-                    class="btn btn-outline-secondary statistics-clear-dates"
-                >
-                    {% translate "Clear dates" %}
-                </button>
+            <div class="statistics-chart-card">
+                <div class="statistics-chart-controls">
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary statistics-export-csv"
+                    >
+                        {% translate "Export CSV" %}
+                    </button>
 
-                <label for="project-statistics-start">
-                    {% translate "From" %}
-                </label>
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary statistics-clear-dates"
+                    >
+                        {% translate "Clear dates" %}
+                    </button>
 
-                <input
-                    type="date"
-                    id="project-statistics-start"
-                    class="statistics-start-date"
-                >
+                    <label for="{{ chart.key }}-statistics-start">
+                        {% translate "From" %}
+                    </label>
 
-                <label for="project-statistics-end">
-                    {% translate "To" %}
-                </label>
+                    <input
+                        type="date"
+                        id="{{ chart.key }}-statistics-start"
+                        class="statistics-start-date"
+                    >
 
-                <input
-                    type="date"
-                    id="project-statistics-end"
-                    class="statistics-end-date"
-                >
+                    <label for="{{ chart.key }}-statistics-end">
+                        {% translate "To" %}
+                    </label>
 
-                <label for="project-statistics-interval">
-                    {% translate "View by" %}
-                </label>
+                    <input
+                        type="date"
+                        id="{{ chart.key }}-statistics-end"
+                        class="statistics-end-date"
+                    >
 
-                <select
-                    id="project-statistics-interval"
-                    class="statistics-interval"
-                >
-                    <option value="day">{% translate "Day" %}</option>
-                    <option value="month" selected>{% translate "Month" %}</option>
-                    <option value="quarter">{% translate "Quarter" %}</option>
-                    <option value="year">{% translate "Year" %}</option>
-                </select>
+                    <label for="{{ chart.key }}-statistics-interval">
+                        {% translate "View by" %}
+                    </label>
 
-                <div class="project-statistics-total">
-                    <span>
-                        <strong>{% translate "Total in displayed period" %}:</strong>
-                        <span class="statistics-total"></span>
-                    </span>
+                    <select
+                        id="{{ chart.key }}-statistics-interval"
+                        class="statistics-interval"
+                    >
+                        <option value="day">{% translate "Day" %}</option>
+                        <option value="month" selected>{% translate "Month" %}</option>
+                        <option value="quarter">{% translate "Quarter" %}</option>
+                        <option value="year">{% translate "Year" %}</option>
+                    </select>
 
-                    <span>
-                        <strong>{% translate "Total in system" %}:</strong>
-                        <span>{{ project_total }}</span>
-                    </span>
+                    <div class="project-statistics-total">
+                        <span>
+                            <strong>{% translate "Total in displayed period" %}:</strong>
+                            <span class="statistics-total"></span>
+                        </span>
+
+                        <span>
+                            <strong>{% translate "Total in system" %}:</strong>
+                            <span>{{ chart.total }}</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="statistics-chart-container">
+                    <canvas class="statistics-chart"></canvas>
                 </div>
             </div>
-
-            <div class="statistics-chart-container">
-                <canvas class="statistics-chart"></canvas>
-            </div>
-        </div>
-    </section>
-
-    <section
-        class="statistics-section"
-        data-statistics-chart
-        data-statistics-type="time"
-        data-statistics-id="user-statistics-data"
-        data-storage-key="user-statistics-interval"
-        data-dataset-label="{% translate 'Number of registered users' %}"
-        data-x-axis-title="{% translate 'Registered' %}"
-        data-y-axis-title="{% translate 'Number of registered users' %}"
-        data-bar-color="{{ statistics_config.users.bar_color }}"
-        data-fill-gaps="{{ statistics_config.users.empty_periods|yesno:'true,false' }}"
-        data-label-orientation="{{ statistics_config.users.label_orientation }}"
-    >
-        <h2>{% translate "Number of registered users" %}</h2>
-
-        <div class="statistics-chart-card">
-            <div class="statistics-chart-controls">
-                <button
-                    type="button"
-                    class="btn btn-outline-secondary statistics-export-csv"
-                >
-                    {% translate "Export CSV" %}
-                </button>
-                <button
-                    type="button"
-                    class="btn btn-outline-secondary statistics-clear-dates"
-                >
-                    {% translate "Clear dates" %}
-                </button>
-
-                <label for="user-statistics-start">
-                    {% translate "From" %}
-                </label>
-
-                <input
-                    type="date"
-                    id="user-statistics-start"
-                    class="statistics-start-date"
-                >
-
-                <label for="user-statistics-end">
-                    {% translate "To" %}
-                </label>
-
-                <input
-                    type="date"
-                    id="user-statistics-end"
-                    class="statistics-end-date"
-                >
-
-                <label for="user-statistics-interval">
-                    {% translate "View by" %}
-                </label>
-
-                <select
-                    id="user-statistics-interval"
-                    class="statistics-interval"
-                >
-                    <option value="day">{% translate "Day" %}</option>
-                    <option value="month" selected>{% translate "Month" %}</option>
-                    <option value="quarter">{% translate "Quarter" %}</option>
-                    <option value="year">{% translate "Year" %}</option>
-                </select>
-
-                <div class="project-statistics-total">
-                    <span>
-                        <strong>{% translate "Total in displayed period" %}:</strong>
-                        <span class="statistics-total"></span>
-                    </span>
-
-                    <span>
-                        <strong>{% translate "Total in system" %}:</strong>
-                        <span>{{ user_total }}</span>
-                    </span>
-                </div>
-            </div>
-
-            <div class="statistics-chart-container">
-                <canvas class="statistics-chart"></canvas>
-            </div>
-        </div>
-    </section>
+        </section>
+    {% endfor %}
 
     <!-- Catalogs vertical -->
     <section
@@ -195,7 +115,7 @@
         data-dataset-label="{% translate 'Number of projects' %}"
         data-x-axis-title="{% translate 'Catalog' %}"
         data-y-axis-title="{% translate 'Number of projects' %}"
-        data-bar-color="{{ statistics_config.catalogs.bar_color }}"
+        data-bar-color="{{ statistics_settings.catalogs.bar_color }}"
         data-label-orientation="vertical"
         data-chart-orientation="vertical"
     >
@@ -220,9 +140,9 @@
         data-dataset-label="{% translate 'Number of projects' %}"
         data-x-axis-title="{% translate 'Number of projects' %}"
         data-y-axis-title="{% translate 'Catalog' %}"
-        data-bar-color="{{ statistics_config.catalogs.bar_color }}"
-        data-label-orientation="{{ statistics_config.catalogs.label_orientation }}"
-        data-chart-orientation="{{ statistics_config.catalogs.orientation }}"
+        data-bar-color="{{ statistics_settings.catalogs.bar_color }}"
+        data-label-orientation="{{ statistics_settings.catalogs.label_orientation }}"
+        data-chart-orientation="{{ statistics_settings.catalogs.orientation }}"
     >
         <h2>{% translate 'Catalog usage' %}</h2>
 
@@ -245,8 +165,9 @@
 
 </div>
 
-{{ project_statistics|json_script:"project-statistics-data" }}
-{{ user_statistics|json_script:"user-statistics-data" }}
+{% for chart in time_charts %}
+    {{ chart.statistics|json_script:chart.statistics_id }}
+{% endfor %}
 {{ catalog_statistics|json_script:"catalog-statistics-data" }}
 
 {% endblock %}

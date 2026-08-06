@@ -1,8 +1,7 @@
 from copy import deepcopy
 
 from django.apps import apps
-from django.conf import settings
-from django.contrib.auth import get_user_model
+from django.conf import settings as django_settings
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.sites.models import Site
 from django.db.models import Count, Q
@@ -11,10 +10,9 @@ from django.template import TemplateDoesNotExist
 from django.template.loader import get_template
 from django.views.generic import TemplateView
 
-from rdmo.projects.models import Project
 from rdmo.questions.models import Catalog
 
-from .config import DEFAULT_STATISTICS_CONFIG
+from .config import DEFAULT_SETTINGS, TIME_CHART_DEFINITION
 from .utils import get_catalog_statistics, get_time_statistics
 
 
@@ -36,36 +34,51 @@ class StatisticsView(PermissionRequiredMixin, TemplateView):
         except TemplateDoesNotExist:
             base_template = 'core/base.html'
 
-        User = get_user_model()
         current_site = Site.objects.get_current()
 
-        config = deepcopy(DEFAULT_STATISTICS_CONFIG)
+        settings = deepcopy(DEFAULT_SETTINGS)
 
-        custom_config = getattr(settings, 'RDMO_STATISTICS', {})
+        custom_settings = getattr(django_settings, 'RDMO_STATISTICS', {})
 
-        for section, values in custom_config.items():
-            config[section].update(values)
+        for section, values in custom_settings.items():
+            if section not in settings:
+                continue
 
-        project_queryset = Project.objects.filter(site=current_site)
-        user_queryset = User.objects.filter(role__member=current_site)
+            settings[section].update({
+                key: value
+                for key, value in values.items()
+                if key in settings[section]
+            })
 
-        project_statistics = (
-            project_queryset
-            .annotate(period=TruncDay('created'))
-            .values('period')
-            .annotate(count=Count('id'))
-            .values_list('period', 'count')
-            .order_by('period')
-        )
+        time_charts = []
 
-        user_statistics = (
-            user_queryset
-            .annotate(period=TruncDay('date_joined'))
-            .values('period')
-            .annotate(count=Count('id'))
-            .values_list('period', 'count')
-            .order_by('period')
-        )
+        for name, definition in TIME_CHART_DEFINITION.items():
+            model = apps.get_model(definition['model'])
+
+            filters = {
+                lookup: current_site if value == 'current_site' else value
+                for lookup, value in definition['filters'].items()
+            }
+
+            queryset = model.objects.filter(**filters)
+
+            statistics = (
+                queryset
+                .annotate(period=TruncDay(definition['date_field']))
+                .values('period')
+                .annotate(count=Count('id'))
+                .values_list('period', 'count')
+                .order_by('period')
+            )
+
+            time_charts.append({
+                **definition,
+                **settings.get(name, {}),
+                'statistics': get_time_statistics(statistics),
+                'total': queryset.count(),
+                'statistics_id': f"{definition['key']}-statistics-data",
+                'storage_key': f"{definition['key']}-statistics-interval",
+            })
 
         catalog_statistics = (
             Catalog.objects
@@ -82,11 +95,8 @@ class StatisticsView(PermissionRequiredMixin, TemplateView):
         context.update({
             'base_template': base_template,
             'current_site': current_site,
-            'statistics_config': config,
-            'project_statistics': get_time_statistics(project_statistics),
-            'project_total': project_queryset.count(),
-            'user_statistics': get_time_statistics(user_statistics),
-            'user_total': user_queryset.count(),
+            'statistics_settings': settings,
+            'time_charts': time_charts,
             'catalog_statistics': get_catalog_statistics(catalog_statistics),
         })
 
