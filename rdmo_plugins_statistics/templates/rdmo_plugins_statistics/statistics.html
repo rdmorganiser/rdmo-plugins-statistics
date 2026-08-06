@@ -85,8 +85,15 @@
                 </select>
 
                 <div class="project-statistics-total">
-                    <strong>{% translate "Total" %}:</strong>
-                    <span class="statistics-total"></span>
+                    <span>
+                        <strong>{% translate "Total in displayed period" %}:</strong>
+                        <span class="statistics-total"></span>
+                    </span>
+
+                    <span>
+                        <strong>{% translate "Total in system" %}:</strong>
+                        <span>{{ project_total }}</span>
+                    </span>
                 </div>
             </div>
 
@@ -161,8 +168,15 @@
                 </select>
 
                 <div class="project-statistics-total">
-                    <strong>{% translate "Total" %}:</strong>
-                    <span class="statistics-total"></span>
+                    <span>
+                        <strong>{% translate "Total in displayed period" %}:</strong>
+                        <span class="statistics-total"></span>
+                    </span>
+
+                    <span>
+                        <strong>{% translate "Total in system" %}:</strong>
+                        <span>{{ user_total }}</span>
+                    </span>
                 </div>
             </div>
 

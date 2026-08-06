@@ -43,18 +43,23 @@ class StatisticsView(PermissionRequiredMixin, TemplateView):
         for section, values in custom_config.items():
             config[section].update(values)
 
+        project_queryset = Project.objects.filter(site=current_site)
+        user_queryset = User.objects.filter(role__member=current_site)
+
         context.update({
             'base_template': base_template,
             'current_site': current_site,
             'statistics_config': config,
             'project_statistics': get_time_statistics(
-                Project.objects.filter(site=current_site),
+                project_queryset,
                 'created',
             ),
+            'project_total': project_queryset.count(),
             'user_statistics': get_time_statistics(
-                User.objects.filter(role__member=current_site),
+                user_queryset,
                 'date_joined',
             ),
+            'user_total': user_queryset.count(),
             'catalog_statistics': get_catalog_statistics(current_site),
         })
 

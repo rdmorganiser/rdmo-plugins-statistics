@@ -66,3 +66,9 @@
   height: 340px;
 
 }
+
+.project-statistics-total {
+  display: flex;
+  gap: 1rem;
+  white-space: nowrap;
+}

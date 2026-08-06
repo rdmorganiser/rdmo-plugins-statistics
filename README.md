@@ -11,7 +11,7 @@ The statistics page currently provides:
 - Catalog usage by number of projects
 - Daily, monthly, quarterly, and yearly aggregation for the time-based charts
 - Optional start and end date filters
-- A displayed total for the currently selected time range
+- A total for the displayed time range and the system's overall total
 - Persistent interval selection for the project and user charts using browser storage
 
 Access to the statistics page is controlled by the statistics.view_statistics permission.
