@@ -90,12 +90,12 @@ The default chart configuration is:
 RDMO_STATISTICS = {
     'projects': {
         'bar_color': '#7eafe0',
-        'fill_gaps': True,
+        'empty_periods': True,
         'label_orientation': 'auto',
     },
     'users': {
         'bar_color': '#65c5c4',
-        'fill_gaps': False,
+        'empty_periods': False,
         'label_orientation': 'auto',
     },
     'catalogs': {
@@ -111,11 +111,12 @@ The chart configuration can be overridden in `rdmo-app/config/settings/local.py`
 Currently, the following configuration options are supported:
 
 - `bar_color`
-- `fill_gaps` (time-based charts)
+- `empty_periods` (time-based charts)
 - `orientation` (catalog chart)
 - `label_orientation`
 
 ## Displayed Statistics
+By default, the time-based charts display a shortened time range to improve readability. Users can expand or further restrict the displayed data using the From and To date filters.
 
 ### Projects
 
