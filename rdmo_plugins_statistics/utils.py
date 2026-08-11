@@ -1,18 +1,3 @@
-# def get_time_statistics(statistics):
-
-#     return {
-#         'day': {
-#           'rows': [
-#               {
-#                   'key': period.isoformat(),
-#                   'label': period.isoformat(),
-#                   'value': count,
-#               }
-#               for period, count in statistics
-#           ],
-#         },
-#     }
-
 def get_time_statistics(statistics, calculation):
     total = 0
     rows = []
@@ -37,16 +22,7 @@ def get_time_statistics(statistics, calculation):
     }
 
 
-def get_catalog_statistics(statistics):
-
+def get_category_statistics(statistics):
     return {
-        'rows': [
-            {
-                'key': catalog.id,
-                'label': catalog.title,
-                'value': catalog.count,
-                **({'label_suffix': ' *'} if not catalog.available else {}),
-            }
-            for catalog in statistics
-        ],
+        'rows': list(statistics),
     }

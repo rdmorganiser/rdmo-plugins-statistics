@@ -1,31 +1,22 @@
 from django.utils.translation import gettext_lazy as _
 
-DEFAULT_SETTINGS = {
-    'projects': {
-        'bar_color': '#7eafe0',
-        'empty_periods': True,
-        'label_orientation': 'auto',
-    },
-    'users': {
-        'bar_color': '#65c5c4',
-        'empty_periods': False,
-        'label_orientation': 'auto',
-    },
-    'catalogs': {
-        'bar_color': '#a8d37d',
-        'label_orientation': 'horizontal',
-        'orientation': 'horizontal',
-    },
+TIME_CHART_SETTINGS = {
+    'bar_color',
+    'empty_periods',
+    'label_orientation',
+}
+
+CATEGORY_CHART_SETTINGS = {
+    'bar_color',
+    'label_orientation',
+    'orientation',
 }
 
 TIME_CHART_DEFINITION = {
     'projects': {
         'key': 'project',
         'type': 'time',
-        'model': 'projects.Project',
-        'filters': {
-            'site': 'current_site',
-        },
+        'query_key': 'project',
         'date_field': 'created',
         'calculation': 'period_count',
         'bar_color': '#7eafe0',
@@ -39,10 +30,7 @@ TIME_CHART_DEFINITION = {
     'users': {
         'key': 'user',
         'type': 'time',
-        'model': 'auth.User',
-        'filters': {
-            'role__member': 'current_site',
-        },
+        'query_key': 'user',
         'date_field': 'date_joined',
         'calculation': 'period_count',
         'bar_color': '#65c5c4',
@@ -56,10 +44,7 @@ TIME_CHART_DEFINITION = {
     'cumulative_users': {
         'key': 'cumulative-user',
         'type': 'time',
-        'model': 'auth.User',
-        'filters': {
-            'role__member': 'current_site',
-        },
+        'query_key': 'user',
         'date_field': 'date_joined',
         'calculation': 'cumulative_count',
         'bar_color': '#65c5c4',
@@ -69,5 +54,34 @@ TIME_CHART_DEFINITION = {
         'title': _('Number of users over time'),
         'x_axis_title': _('Date'),
         'y_axis_title': _('Number of users'),
+    },
+}
+
+CATEGORY_CHART_DEFINITION = {
+    'catalogs': {
+        'key': 'catalog',
+        'type': 'category',
+        'query_key': 'catalog',
+        'bar_color': '#a8d37d',
+        'dataset_label': _('Number of projects'),
+        'label_orientation': 'horizontal',
+        'note': _('* unavailable'),
+        'orientation': 'horizontal',
+        'title': _('Catalog usage'),
+        'x_axis_title': _('Number of projects'),
+        'y_axis_title': _('Catalog'),
+    },
+    'catalogs_vertical': {
+        'key': 'catalog-vertical',
+        'type': 'category',
+        'query_key': 'catalog',
+        'bar_color': '#a8d37d',
+        'dataset_label': _('Number of projects'),
+        'label_orientation': 'vertical',
+        'note': _('* unavailable'),
+        'orientation': 'vertical',
+        'title': _('Catalog usage'),
+        'x_axis_title': _('Catalog'),
+        'y_axis_title': _('Number of projects'),
     },
 }

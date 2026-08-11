@@ -53,30 +53,27 @@ const truncateLabel = (label, maxLength = 20) => {
         : `${text}${suffix}`
 }
 
-const fillMissingPeriods = (rows, interval, calculation) => {
+const fillMissingPeriods = (rows, interval) => {
     if (rows.length === 0) {
         return rows
     }
 
     const rowsByKey = new Map(rows.map((row) => [row.key, row]))
     const result = []
-    let previousValue = 0
 
     const current = new Date(`${rows[0].key}T00:00:00Z`)
     const end = new Date(`${rows.at(-1).key}T00:00:00Z`)
 
     while (current <= end) {
         const key = current.toISOString().slice(0, 10)
-        const row = rowsByKey.get(key) || {
-            key,
-            label: key,
-            value: calculation === 'cumulative_count'
-                ? previousValue
-                : 0,
-        }
 
-        result.push(row)
-        previousValue = row.value
+        result.push(
+            rowsByKey.get(key) || {
+                key,
+                label: key,
+                value: 0
+            }
+        )
 
         switch (interval) {
             case 'year':
@@ -111,6 +108,28 @@ const timeCalculations = {
 const getTimeChartRows = (statistics, filters, container) => {
     const groupedRows = new Map()
 
+    const getPeriod = (date) => {
+        const [year, month] = date.split('-')
+
+        switch (filters.interval) {
+            case 'year':
+                return `${year}-01-01`
+
+            case 'quarter': {
+                const quarterStartMonth =
+                    Math.floor((Number(month) - 1) / 3) * 3 + 1
+
+                return `${year}-${String(quarterStartMonth).padStart(2, '0')}-01`
+            }
+
+            case 'month':
+                return `${year}-${month}-01`
+
+            default:
+                return date
+        }
+    }
+
     statistics.day.rows.forEach((row) => {
         const date = row.key.slice(0, 10)
 
@@ -122,28 +141,7 @@ const getTimeChartRows = (statistics, filters, container) => {
             return
         }
 
-        const [year, month] = date.split('-')
-        let period
-
-        switch (filters.interval) {
-            case 'year':
-                period = `${year}-01-01`
-                break
-
-            case 'quarter': {
-                const quarterStartMonth = Math.floor((Number(month) - 1) / 3) * 3 + 1
-
-                period = `${year}-${String(quarterStartMonth).padStart(2, '0')}-01`
-                break
-            }
-
-            case 'month':
-                period = `${year}-${month}-01`
-                break
-
-            default:
-                period = date
-        }
+        const period = getPeriod(date)
 
         const calculation = timeCalculations[container.dataset.calculation]
         const currentRow = groupedRows.get(period)
@@ -165,11 +163,57 @@ const getTimeChartRows = (statistics, filters, container) => {
     let rows = Array.from(groupedRows.values())
 
     if (container.dataset.fillGaps === 'true') {
-        rows = fillMissingPeriods(
-            rows,
-            filters.interval,
-            container.dataset.calculation,
+        const startValue = (
+            container.dataset.calculation === 'cumulative_count' &&
+            filters.start
         )
+            ? statistics.day.rows.reduce((value, row) => (
+                row.key.slice(0, 10) < filters.start
+                    ? row.value
+                    : value
+            ), 0)
+            : 0
+
+        const boundaries = [
+            filters.start && {
+                key: getPeriod(filters.start),
+                value: startValue,
+            },
+            filters.end && {
+                key: getPeriod(filters.end),
+                value: 0,
+            },
+        ].filter(Boolean)
+
+        boundaries.forEach(({ key, value }) => {
+            if (!rows.some((row) => row.key === key)) {
+                rows.push({
+                    key,
+                    label: key,
+                    value,
+                })
+            }
+        })
+
+        rows.sort((a, b) => a.key.localeCompare(b.key))
+        rows = fillMissingPeriods(rows, filters.interval)
+    }
+
+    if (container.dataset.calculation === 'cumulative_count') {
+        let previousValue = 0
+
+        rows = rows.map((row) => {
+            if (row.value === 0) {
+                return {
+                    ...row,
+                    value: previousValue,
+                }
+            }
+
+            previousValue = row.value
+
+            return row
+        })
     }
 
     if (!filters.start && !filters.end) {
@@ -284,9 +328,19 @@ const getTimeChartControls = (container) => {
     const clearDatesButton = container.querySelector('.statistics-clear-dates')
     const storageKey = container.dataset.storageKey
     const storedInterval = localStorage.getItem(storageKey)
+    const storedStart = localStorage.getItem(`${storageKey}-start`)
+    const storedEnd = localStorage.getItem(`${storageKey}-end`)
 
     if (storedInterval) {
         intervalSelect.value = storedInterval
+    }
+
+    if (storedStart) {
+        startDateInput.value = storedStart
+    }
+
+    if (storedEnd) {
+        endDateInput.value = storedEnd
     }
 
     const filters = {
@@ -325,12 +379,14 @@ const addTimeChartListeners = (controls, updateChart) => {
 
     startDateInput.addEventListener('change', () => {
         filters.start = startDateInput.value
+        localStorage.setItem(`${storageKey}-start`, filters.start)
         updateClearDatesButton(clearDatesButton, filters)
         updateChart()
     })
 
     endDateInput.addEventListener('change', () => {
         filters.end = endDateInput.value
+        localStorage.setItem(`${storageKey}-end`, filters.end)
         updateClearDatesButton(clearDatesButton, filters)
         updateChart()
     })
@@ -341,6 +397,8 @@ const addTimeChartListeners = (controls, updateChart) => {
         filters.start = ''
         filters.end = ''
 
+        localStorage.removeItem(`${storageKey}-start`)
+        localStorage.removeItem(`${storageKey}-end`)
         updateClearDatesButton(clearDatesButton, filters)
         updateChart()
     })
