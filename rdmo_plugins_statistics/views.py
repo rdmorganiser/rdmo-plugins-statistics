@@ -1,13 +1,14 @@
+from django.apps import apps
 from django.conf import settings as django_settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.apps import apps
 from django.contrib.sites.models import Site
 from django.db.models import Count, Q
 from django.db.models.functions import TruncDay
 from django.template import TemplateDoesNotExist
 from django.template.loader import get_template
 from django.views.generic import TemplateView
+
 from rdmo.projects.models import Project
 from rdmo.questions.models import Catalog
 
@@ -102,6 +103,24 @@ class StatisticsView(PermissionRequiredMixin, TemplateView):
                             filter=Q(projects__site=current_site),
                         )
                     )
+                    .order_by('id')
+                )
+            ],
+            'project-progress': [
+                {
+                    'key': project.id,
+                    'label': project.title,
+                    'value': round(
+                        100 * project.progress_count /
+                        project.progress_total
+                    ) if (
+                        project.progress_count is not None and
+                        project.progress_total
+                    ) else 0,
+                }
+                for project in (
+                    Project.objects
+                    .filter(site=current_site)
                     .order_by('id')
                 )
             ],

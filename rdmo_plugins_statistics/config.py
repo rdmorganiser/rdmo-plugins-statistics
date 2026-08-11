@@ -84,4 +84,16 @@ CATEGORY_CHART_DEFINITION = {
         'x_axis_title': _('Catalog'),
         'y_axis_title': _('Number of projects'),
     },
+    'project_progress': {
+        'key': 'project-progress',
+        'type': 'category',
+        'query_key': 'project-progress',
+        'bar_color': '#e6a15c',
+        'dataset_label': _('Progress (%)'),
+        'label_orientation': 'horizontal',
+        'orientation': 'horizontal',
+        'title': _('Project progress'),
+        'x_axis_title': _('Progress (%)'),
+        'y_axis_title': _('Project'),
+    },
 }
