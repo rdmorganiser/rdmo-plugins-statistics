@@ -67,6 +67,15 @@
 
 }
 
+.statistics-chart-viewport {
+  max-height: 680px;
+  overflow: auto;
+}
+
+.statistics-chart-viewport .statistics-chart-container {
+  min-width: 100%;
+}
+
 .project-statistics-total {
   display: flex;
   gap: 1rem;

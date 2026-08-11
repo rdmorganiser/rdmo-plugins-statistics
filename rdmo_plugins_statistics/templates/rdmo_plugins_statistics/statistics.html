@@ -135,8 +135,10 @@
                         {% translate "Export CSV" %}
                     </button>
 
-                    <div class="statistics-chart-container">
-                        <canvas class="statistics-chart"></canvas>
+                    <div class="statistics-chart-viewport">
+                        <div class="statistics-chart-container">
+                            <canvas class="statistics-chart"></canvas>
+                        </div>
                     </div>
 
                     {% if chart.note %}

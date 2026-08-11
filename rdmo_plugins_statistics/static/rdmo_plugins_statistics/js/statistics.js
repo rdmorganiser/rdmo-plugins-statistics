@@ -286,6 +286,21 @@ const updateTotal = (element, rows) => {
     }
 }
 
+const setCategoryChartSize = (container, rows) => {
+    const chartContainer = container.querySelector('.statistics-chart-container')
+    const isHorizontal = container.dataset.chartOrientation === 'horizontal'
+
+    if (isHorizontal) {
+        const height = Math.max(340, rows.length * 32 + 80)
+
+        chartContainer.style.height = `${height}px`
+    } else {
+        const width = rows.length * 64 + 80
+
+        chartContainer.style.width = `${width}px`
+    }
+}
+
 const drawValueLabelsPlugin = {
     id: 'drawValueLabels',
 
@@ -491,6 +506,10 @@ const createStatisticsChart = (container) => {
     const initialData = getPreparedData()
 
     updateTotal(totalElement, initialData.rows)
+
+    if (statisticsTypeName === 'category') {
+        setCategoryChartSize(container, initialData.rows)
+    }
 
     const isHorizontal = container.dataset.chartOrientation === 'horizontal'
 
