@@ -103,8 +103,18 @@
                     </div>
                 </div>
 
-                <div class="statistics-chart-container">
-                    <canvas class="statistics-chart"></canvas>
+                <div class="statistics-chart-layout">
+                    <div class="statistics-chart-y-axis-title">
+                        {{ chart.y_axis_title }}
+                    </div>
+
+                    <div class="statistics-chart-container">
+                        <canvas class="statistics-chart"></canvas>
+                    </div>
+
+                    <div class="statistics-chart-x-axis-title">
+                        {{ chart.x_axis_title }}
+                    </div>
                 </div>
             </div>
         </section>
@@ -135,9 +145,19 @@
                         {% translate "Export CSV" %}
                     </button>
 
-                    <div class="statistics-chart-viewport">
-                        <div class="statistics-chart-container">
-                            <canvas class="statistics-chart"></canvas>
+                    <div class="statistics-chart-layout">
+                        <div class="statistics-chart-y-axis-title">
+                            {{ chart.y_axis_title }}
+                        </div>
+
+                        <div class="statistics-chart-viewport">
+                            <div class="statistics-chart-container">
+                                <canvas class="statistics-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="statistics-chart-x-axis-title">
+                            {{ chart.x_axis_title }}
                         </div>
                     </div>
 

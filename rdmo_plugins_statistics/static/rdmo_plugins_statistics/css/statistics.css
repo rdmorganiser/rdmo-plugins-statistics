@@ -64,7 +64,40 @@
 .statistics-chart-container {
   position: relative;
   height: 340px;
+}
 
+.statistics-chart-layout {
+  display: grid;
+  grid-template-areas:
+    "y-axis chart"
+    ". x-axis";
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.5rem;
+}
+
+.statistics-chart-layout > .statistics-chart-container,
+.statistics-chart-layout > .statistics-chart-viewport {
+  grid-area: chart;
+  min-width: 0;
+}
+
+.statistics-chart-y-axis-title,
+.statistics-chart-x-axis-title {
+  color: #666;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.statistics-chart-y-axis-title {
+  grid-area: y-axis;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.statistics-chart-x-axis-title {
+  grid-area: x-axis;
+  margin-top: 0.5rem;
 }
 
 .statistics-chart-viewport {

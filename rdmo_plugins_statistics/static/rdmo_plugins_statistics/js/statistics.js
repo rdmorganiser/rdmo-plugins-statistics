@@ -394,11 +394,6 @@ const getChartScales = (container, preparedData, isHorizontal) => {
         x: {
             beginAtZero: isHorizontal,
 
-            title: {
-                display: true,
-                text: container.dataset.xAxisTitle
-            },
-
             grid: {
                 display: isHorizontal
             },
@@ -423,11 +418,6 @@ const getChartScales = (container, preparedData, isHorizontal) => {
 
         y: {
             beginAtZero: !isHorizontal,
-
-            title: {
-                display: true,
-                text: container.dataset.yAxisTitle
-            },
 
             ticks: isHorizontal
                 ? {}
