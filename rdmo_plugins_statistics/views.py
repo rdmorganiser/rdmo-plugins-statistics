@@ -133,15 +133,30 @@ class StatisticsView(PermissionRequiredMixin, TemplateView):
 
             statistics_data = get_category_statistics(queryset)
 
-            category_charts.append({
+            chart_settings = {
+                key: value
+                for key, value in custom_settings.get(name, {}).items()
+                if key in CATEGORY_CHART_SETTINGS
+            }
+
+            chart = {
                 **definition,
-                **{
-                    key: value
-                    for key, value in custom_settings.get(name, {}).items()
-                    if key in CATEGORY_CHART_SETTINGS
-                },
+                **chart_settings,
                 'statistics': statistics_data,
-            })
+            }
+
+            opposite_orientation = {
+                'horizontal': 'vertical',
+                'vertical': 'horizontal',
+            }[definition['orientation']]
+
+            if chart_settings.get('orientation') == opposite_orientation:
+                chart['x_axis_title'], chart['y_axis_title'] = (
+                    chart['y_axis_title'],
+                    chart['x_axis_title'],
+                )
+
+            category_charts.append(chart)
 
         context.update({
             'base_template': base_template,
