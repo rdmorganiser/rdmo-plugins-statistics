@@ -1,3 +1,17 @@
+const CUMULATIVE_CALCULATION = 'cumulative_count'
+
+const TIME_PERIOD_LIMITS = {
+    day: 31,
+    month: 24,
+    quarter: 20,
+    year: 20
+}
+
+const CATEGORY_CHART_MIN_SIZE = 340
+const CATEGORY_CHART_AXIS_SIZE = 80
+const HORIZONTAL_CATEGORY_SIZE = 32
+const VERTICAL_CATEGORY_SIZE = 64
+
 const updateClearDatesButton = (button, filters) => {
     button.disabled = !filters.start && !filters.end
 }
@@ -96,6 +110,35 @@ const fillMissingPeriods = (rows, interval) => {
     return result
 }
 
+const getPeriodKey = (date, interval) => {
+    const [year, month] = date.split('-')
+
+    switch (interval) {
+        case 'year':
+            return `${year}-01-01`
+
+        case 'quarter': {
+            const quarterStartMonth =
+                Math.floor((Number(month) - 1) / 3) * 3 + 1
+
+            return `${year}-${String(quarterStartMonth).padStart(2, '0')}-01`
+        }
+
+        case 'month':
+            return `${year}-${month}-01`
+
+        default:
+            return date
+    }
+}
+
+const isDateInRange = (date, filters) => {
+    return !(
+        (filters.start && date < filters.start) ||
+        (filters.end && date > filters.end)
+    )
+}
+
 const timeCalculations = {
     period_count: {
         combine: (current, next) => current + next,
@@ -105,49 +148,21 @@ const timeCalculations = {
     },
 }
 
-const getTimeChartRows = (statistics, filters, container) => {
+const groupTimeRows = (rows, filters, calculation) => {
     const groupedRows = new Map()
 
-    const getPeriod = (date) => {
-        const [year, month] = date.split('-')
-
-        switch (filters.interval) {
-            case 'year':
-                return `${year}-01-01`
-
-            case 'quarter': {
-                const quarterStartMonth =
-                    Math.floor((Number(month) - 1) / 3) * 3 + 1
-
-                return `${year}-${String(quarterStartMonth).padStart(2, '0')}-01`
-            }
-
-            case 'month':
-                return `${year}-${month}-01`
-
-            default:
-                return date
-        }
-    }
-
-    statistics.day.rows.forEach((row) => {
+    rows.forEach((row) => {
         const date = row.key.slice(0, 10)
 
-        if (filters.start && date < filters.start) {
+        if (!isDateInRange(date, filters)) {
             return
         }
 
-        if (filters.end && date > filters.end) {
-            return
-        }
-
-        const period = getPeriod(date)
-
-        const calculation = timeCalculations[container.dataset.calculation]
+        const period = getPeriodKey(date, filters.interval)
         const currentRow = groupedRows.get(period)
 
         if (currentRow) {
-                currentRow.value = calculation.combine(
+            currentRow.value = calculation.combine(
                 currentRow.value,
                 row.value,
             )
@@ -160,75 +175,97 @@ const getTimeChartRows = (statistics, filters, container) => {
         }
     })
 
-    let rows = Array.from(groupedRows.values())
+    return Array.from(groupedRows.values())
+}
+
+const getCumulativeStartValue = (rows, start) => {
+    return rows.reduce((value, row) => (
+        row.key.slice(0, 10) < start
+            ? row.value
+            : value
+    ), 0)
+}
+
+const addTimeRangeBoundaries = (
+    rows,
+    sourceRows,
+    filters,
+    calculationName,
+) => {
+    const startValue = (
+        calculationName === CUMULATIVE_CALCULATION &&
+        filters.start
+    )
+        ? getCumulativeStartValue(sourceRows, filters.start)
+        : 0
+
+    const boundaries = [
+        filters.start && {
+            key: getPeriodKey(filters.start, filters.interval),
+            value: startValue,
+        },
+        filters.end && {
+            key: getPeriodKey(filters.end, filters.interval),
+            value: 0,
+        },
+    ].filter(Boolean)
+
+    boundaries.forEach(({ key, value }) => {
+        if (!rows.some((row) => row.key === key)) {
+            rows.push({
+                key,
+                label: key,
+                value,
+            })
+        }
+    })
+
+    return rows.sort((a, b) => a.key.localeCompare(b.key))
+}
+
+const carryCumulativeValues = (rows) => {
+    let previousValue = 0
+
+    return rows.map((row) => {
+        if (row.value === 0) {
+            return {
+                ...row,
+                value: previousValue,
+            }
+        }
+
+        previousValue = row.value
+
+        return row
+    })
+}
+
+const getTimeChartRows = (statistics, filters, container) => {
+    const calculationName = container.dataset.calculation
+    const calculation = timeCalculations[calculationName]
+    const sourceRows = statistics.day.rows
+    let rows = groupTimeRows(sourceRows, filters, calculation)
 
     if (container.dataset.fillGaps === 'true') {
-        const startValue = (
-            container.dataset.calculation === 'cumulative_count' &&
-            filters.start
+        rows = addTimeRangeBoundaries(
+            rows,
+            sourceRows,
+            filters,
+            calculationName,
         )
-            ? statistics.day.rows.reduce((value, row) => (
-                row.key.slice(0, 10) < filters.start
-                    ? row.value
-                    : value
-            ), 0)
-            : 0
-
-        const boundaries = [
-            filters.start && {
-                key: getPeriod(filters.start),
-                value: startValue,
-            },
-            filters.end && {
-                key: getPeriod(filters.end),
-                value: 0,
-            },
-        ].filter(Boolean)
-
-        boundaries.forEach(({ key, value }) => {
-            if (!rows.some((row) => row.key === key)) {
-                rows.push({
-                    key,
-                    label: key,
-                    value,
-                })
-            }
-        })
-
-        rows.sort((a, b) => a.key.localeCompare(b.key))
         rows = fillMissingPeriods(rows, filters.interval)
     }
 
-    if (container.dataset.calculation === 'cumulative_count') {
-        let previousValue = 0
-
-        rows = rows.map((row) => {
-            if (row.value === 0) {
-                return {
-                    ...row,
-                    value: previousValue,
-                }
-            }
-
-            previousValue = row.value
-
-            return row
-        })
+    if (calculationName === CUMULATIVE_CALCULATION) {
+        rows = carryCumulativeValues(rows)
     }
 
     if (!filters.start && !filters.end) {
-        const periodLimits = {
-            day: 31,
-            month: 24,
-            quarter: 20,
-            year: 20
-        }
-
-        return rows.slice(-periodLimits[filters.interval])
+        return rows.slice(-TIME_PERIOD_LIMITS[filters.interval])
     }
 
     return rows
-    }
+}
 
 const statisticsTypes = {
     time: {
@@ -291,11 +328,16 @@ const setCategoryChartSize = (container, rows) => {
     const isHorizontal = container.dataset.chartOrientation === 'horizontal'
 
     if (isHorizontal) {
-        const height = Math.max(340, rows.length * 32 + 80)
+        const height = Math.max(
+            CATEGORY_CHART_MIN_SIZE,
+            rows.length * HORIZONTAL_CATEGORY_SIZE + CATEGORY_CHART_AXIS_SIZE,
+        )
 
         chartContainer.style.height = `${height}px`
     } else {
-        const width = rows.length * 64 + 80
+        const width = (
+            rows.length * VERTICAL_CATEGORY_SIZE + CATEGORY_CHART_AXIS_SIZE
+        )
 
         chartContainer.style.width = `${width}px`
     }
@@ -334,6 +376,114 @@ const drawValueLabelsPlugin = {
 
         ctx.restore()
     }
+}
+
+const getChartDataset = (container, preparedData) => {
+    return {
+        label: container.dataset.datasetLabel,
+        data: preparedData.rows.map((row) => row.value),
+        backgroundColor: container.dataset.barColor,
+        borderWidth: 0,
+        barPercentage: 0.85,
+        categoryPercentage: 0.85
+    }
+}
+
+const getChartScales = (container, preparedData, isHorizontal) => {
+    return {
+        x: {
+            beginAtZero: isHorizontal,
+
+            title: {
+                display: true,
+                text: container.dataset.xAxisTitle
+            },
+
+            grid: {
+                display: isHorizontal
+            },
+
+            ticks: isHorizontal
+                ? {
+                    precision: 0
+                }
+                : {
+                    minRotation: preparedData.tickRotation.min,
+                    maxRotation: preparedData.tickRotation.max,
+
+                    callback(value) {
+                        const label = this.getLabelForValue(value)
+
+                        return container.dataset.labelOrientation === 'vertical'
+                            ? truncateLabel(label)
+                            : label
+                    }
+                }
+        },
+
+        y: {
+            beginAtZero: !isHorizontal,
+
+            title: {
+                display: true,
+                text: container.dataset.yAxisTitle
+            },
+
+            ticks: isHorizontal
+                ? {}
+                : {
+                    precision: 0
+                }
+        }
+    }
+}
+
+const getChartOptions = (container, preparedData, isHorizontal) => {
+    return {
+        indexAxis: isHorizontal ? 'y' : 'x',
+        responsive: true,
+        maintainAspectRatio: false,
+
+        layout: {
+            padding: {
+                top: 20,
+                right: isHorizontal ? 30 : 0
+            }
+        },
+
+        plugins: {
+            legend: {
+                display: false
+            },
+
+            tooltip: {
+                displayColors: false
+            }
+        },
+
+        scales: getChartScales(container, preparedData, isHorizontal)
+    }
+}
+
+const createBarChart = (chartElement, container, preparedData) => {
+    const isHorizontal = container.dataset.chartOrientation === 'horizontal'
+
+    return new Chart(chartElement, {
+        type: 'bar',
+
+        data: {
+            labels: preparedData.displayLabels,
+            datasets: [
+                getChartDataset(container, preparedData)
+            ]
+        },
+
+        plugins: [
+            drawValueLabelsPlugin
+        ],
+
+        options: getChartOptions(container, preparedData, isHorizontal)
+    })
 }
 
 const getTimeChartControls = (container) => {
@@ -511,100 +661,7 @@ const createStatisticsChart = (container) => {
         setCategoryChartSize(container, initialData.rows)
     }
 
-    const isHorizontal = container.dataset.chartOrientation === 'horizontal'
-
-    const chart = new Chart(chartElement, {
-        type: 'bar',
-
-        data: {
-            labels: initialData.displayLabels,
-
-            datasets: [
-                {
-                    label: container.dataset.datasetLabel,
-                    data: initialData.rows.map((row) => row.value),
-                    backgroundColor: container.dataset.barColor,
-                    borderWidth: 0,
-                    barPercentage: 0.85,
-                    categoryPercentage: 0.85
-                }
-            ]
-        },
-
-        plugins: [
-            drawValueLabelsPlugin
-        ],
-
-        options: {
-            indexAxis: isHorizontal ? 'y' : 'x',
-            responsive: true,
-            maintainAspectRatio: false,
-
-            layout: {
-                padding: {
-                    top: 20,
-                    right: isHorizontal ? 30 : 0
-                }
-            },
-
-            plugins: {
-                legend: {
-                    display: false
-                },
-
-                tooltip: {
-                    displayColors: false
-                }
-            },
-
-            scales: {
-              x: {
-                  beginAtZero: isHorizontal,
-
-                  title: {
-                      display: true,
-                      text: container.dataset.xAxisTitle
-                  },
-
-                  grid: {
-                      display: isHorizontal
-                  },
-
-                  ticks: isHorizontal
-                      ? {
-                          precision: 0
-                      }
-                      : {
-                          minRotation: initialData.tickRotation.min,
-                          maxRotation: initialData.tickRotation.max,
-
-                          callback(value) {
-                              const label = this.getLabelForValue(value)
-
-                              return container.dataset.labelOrientation === 'vertical'
-                                  ? truncateLabel(label)
-                                  : label
-                          }
-                      }
-              },
-
-              y: {
-                  beginAtZero: !isHorizontal,
-
-                  title: {
-                      display: true,
-                      text: container.dataset.yAxisTitle
-                  },
-
-                  ticks: isHorizontal
-                      ? {}
-                      : {
-                          precision: 0
-                      }
-              }
-          }
-        }
-    })
+    const chart = createBarChart(chartElement, container, initialData)
 
     const updateChart = () => {
         const preparedData = getPreparedData()
