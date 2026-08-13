@@ -8,7 +8,7 @@ The statistics page currently provides:
 
 - Number of projects over time
 - Number of newly registered users over time
-- Cumulative number of users over time
+- Cumulative total users
 - Catalog usage by number of projects
 - Progress of individual projects
 - Daily, monthly, quarterly, and yearly aggregation for the time-based charts
@@ -147,7 +147,7 @@ The user can restrict the displayed data with From and To date fields. The total
 
 New users belonging to the current site are grouped by their registration date and can be filtered and aggregated in the same way as projects. This chart shows how many users registered during each displayed period.
 
-### Number of users over time
+### Total users
 
 The chart shows the total number of users belonging to the current site over time.
 

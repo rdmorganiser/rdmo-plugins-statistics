@@ -51,7 +51,7 @@ TIME_CHART_DEFINITION = {
         'dataset_label': _('Number of users'),
         'empty_periods': True,
         'label_orientation': 'auto',
-        'title': _('Number of users over time'),
+        'title': _('Total users'),
         'x_axis_title': _('Date'),
         'y_axis_title': _('Number of users'),
     },
