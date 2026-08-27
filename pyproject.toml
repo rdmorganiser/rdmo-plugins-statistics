@@ -4,7 +4,7 @@ requires = ["setuptools", "wheel"]
 
 [project]
 name = "rdmo-plugins-statistics"
-description = "Import and export plugins for RDMO."
+description = "Statistics plugin for RDMO."
 readme = "README.md"
 keywords = [
   "data management plan",
@@ -41,11 +41,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ci = [
-  "rdmo-plugins[ci]",
-]
 dev = [
-  "rdmo-plugins[dev]"
+  "pre-commit",
 ]
 
 [project.urls]

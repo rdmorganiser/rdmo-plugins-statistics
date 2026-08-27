@@ -1,0 +1,116 @@
+.statistics-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+
+.statistics-page h1 {
+  margin: 0 0 2rem;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.statistics-section {
+  margin-bottom: 3rem;
+}
+
+.statistics-section h2 {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.statistics-chart-card {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  padding: 1.5rem;
+}
+
+.statistics-chart-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.statistics-chart-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.statistics-chart-controls label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.statistics-chart-controls select {
+  min-width: 90px;
+  padding: 0.3rem 0.6rem;
+
+  border: 0;
+  border-radius: 3px;
+
+  background-color: #008f83;
+  color: #fff;
+
+  font: inherit;
+  cursor: pointer;
+}
+
+.statistics-chart-container {
+  position: relative;
+  height: 340px;
+}
+
+.statistics-chart-layout {
+  display: grid;
+  grid-template-areas:
+    "y-axis chart"
+    ". x-axis";
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.5rem;
+}
+
+.statistics-chart-layout > .statistics-chart-container,
+.statistics-chart-layout > .statistics-chart-viewport {
+  grid-area: chart;
+  min-width: 0;
+}
+
+.statistics-chart-y-axis-title,
+.statistics-chart-x-axis-title {
+  color: #666;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.statistics-chart-y-axis-title {
+  grid-area: y-axis;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.statistics-chart-x-axis-title {
+  grid-area: x-axis;
+  margin-top: 0.5rem;
+}
+
+.statistics-chart-viewport {
+  max-height: 680px;
+  overflow: auto;
+}
+
+.statistics-chart-viewport .statistics-chart-container {
+  min-width: 100%;
+}
+
+.project-statistics-total {
+  display: flex;
+  gap: 1rem;
+  white-space: nowrap;
+}

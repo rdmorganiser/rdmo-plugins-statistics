@@ -1,0 +1,137 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-13 13:01+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: apps.py:11
+msgid "Statistics"
+msgstr "Statistiche"
+
+#: config.py:23 config.py:26 config.py:28 config.py:66 config.py:71
+msgid "Number of projects"
+msgstr "Numero di progetti"
+
+#: config.py:27
+msgid "Created"
+msgstr "Creato"
+
+#: config.py:37 config.py:40 config.py:42
+msgid "Number of registered users"
+msgstr "Numero di utenti registrati"
+
+#: config.py:41
+msgid "Registered"
+msgstr "Registrato"
+
+#: config.py:51 config.py:56
+#, fuzzy
+#| msgid "Number of registered users"
+msgid "Number of users"
+msgstr "Numero di utenti registrati"
+
+#: config.py:54
+#, fuzzy
+#| msgid "Total in system"
+msgid "Total users"
+msgstr "Totale nel sistema"
+
+#: config.py:55
+msgid "Date"
+msgstr ""
+
+#: config.py:68
+msgid "* unavailable"
+msgstr "* non disponibile"
+
+#: config.py:70
+msgid "Catalog usage"
+msgstr "Utilizzo dei cataloghi"
+
+#: config.py:72
+msgid "Catalog"
+msgstr "Catalogo"
+
+#: config.py:79 config.py:83
+msgid "Progress (%)"
+msgstr ""
+
+#: config.py:82
+msgid "Project progress"
+msgstr ""
+
+#: config.py:84
+msgid "Project"
+msgstr ""
+
+#: templates/rdmo_plugins_statistics/statistics.html:18
+#, python-format
+msgid ""
+"\n"
+"            Statistics for %(site_name)s\n"
+"        "
+msgstr ""
+
+#: templates/rdmo_plugins_statistics/statistics.html:47
+#: templates/rdmo_plugins_statistics/statistics.html:145
+msgid "Export CSV"
+msgstr "Esporta CSV"
+
+#: templates/rdmo_plugins_statistics/statistics.html:54
+msgid "Clear dates"
+msgstr "Reimposta filtro date"
+
+#: templates/rdmo_plugins_statistics/statistics.html:58
+msgid "From"
+msgstr "Da"
+
+#: templates/rdmo_plugins_statistics/statistics.html:68
+msgid "To"
+msgstr "A"
+
+#: templates/rdmo_plugins_statistics/statistics.html:78
+msgid "View by"
+msgstr "Visualizza per"
+
+#: templates/rdmo_plugins_statistics/statistics.html:85
+msgid "Day"
+msgstr "Giorno"
+
+#: templates/rdmo_plugins_statistics/statistics.html:86
+msgid "Month"
+msgstr "Mese"
+
+#: templates/rdmo_plugins_statistics/statistics.html:87
+msgid "Quarter"
+msgstr "Trimestre"
+
+#: templates/rdmo_plugins_statistics/statistics.html:88
+msgid "Year"
+msgstr "Anno"
+
+#: templates/rdmo_plugins_statistics/statistics.html:94
+msgid "Total in displayed period"
+msgstr "Totale nel periodo visualizzato"
+
+#: templates/rdmo_plugins_statistics/statistics.html:100
+msgid "Total in system"
+msgstr "Totale nel sistema"
+
+#, fuzzy
+#~| msgid "Number of projects"
+#~ msgid "Number of users over time"
+#~ msgstr "Numero di progetti"
