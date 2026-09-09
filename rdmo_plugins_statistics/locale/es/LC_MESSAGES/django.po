@@ -132,6 +132,11 @@ msgstr "Total en el período mostrado"
 msgid "Total in system"
 msgstr "Total en el sistema"
 
+#: templates/rdmo_plugins_statistics/statistics.html
+#, python-format
+msgid "Showing at most the %(limit)s most recently created projects."
+msgstr "Se muestran como máximo los %(limit)s proyectos creados más recientemente."
+
 #, fuzzy
 #~| msgid "Number of projects"
 #~ msgid "Number of users over time"
