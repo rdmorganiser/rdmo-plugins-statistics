@@ -127,13 +127,14 @@
                 class="statistics-section"
                 data-statistics-chart
                 data-statistics-type="{{ chart.type }}"
+                data-chart-type="{{ chart.chart_type }}"
                 data-statistics-id="{{ statistics_id }}"
                 data-dataset-label="{{ chart.dataset_label }}"
                 data-x-axis-title="{{ chart.x_axis_title }}"
                 data-y-axis-title="{{ chart.y_axis_title }}"
                 data-bar-color="{{ chart.bar_color }}"
                 data-label-orientation="{{ chart.label_orientation }}"
-                data-chart-orientation="{{ chart.orientation }}"
+                {% if chart.chart_type == 'bar' %}data-chart-orientation="{{ chart.orientation }}"{% endif %}
             >
                 <h2>{{ chart.title }}</h2>
 

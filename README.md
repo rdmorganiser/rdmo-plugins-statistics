@@ -114,6 +114,7 @@ RDMO_STATISTICS = {
     },
     'project_progress': {
         'bar_color': '#e6a15c',
+        'chart_type': 'scatter',
         'label_orientation': 'horizontal',
         'orientation': 'vertical',
     },
@@ -128,6 +129,7 @@ Currently, the following configuration options are supported:
 - `empty_periods` (time-based charts): include periods without new records when set to `True`
 - `label_orientation`
 - `orientation` (category charts): display bars `horizontal` or `vertical`
+- `chart_type` (project progress): display an unconnected `scatter` plot or `bar` chart
 
 ## Displayed Statistics
 
@@ -160,7 +162,7 @@ Catalogs assigned to the current site are displayed together with the number of 
 
 ### Project progress
 
-The project-progress chart groups all projects belonging to the current site by their rounded progress percentage. Projects whose interview has not started are included at 0%.
+The project-progress chart groups all projects belonging to the current site by their rounded progress percentage. It defaults to an unconnected scatter plot with a fixed 0–100% horizontal axis and the number of projects on the vertical axis. Set `chart_type` to `bar` to use bars; `orientation` applies only in that mode. Projects whose interview has not started are included at 0%.
 
 ## Frontend implementation
 

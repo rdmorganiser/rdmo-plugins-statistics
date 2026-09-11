@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -73,10 +74,32 @@ def test_statistics_page_uses_current_site_data(client):
     ]
     assert user_chart['total'] == 1
     assert set(catalog_chart['statistics']) == {'rows'}
+    assert catalog_chart['chart_type'] == 'bar'
     assert progress_chart['statistics']['rows'] == [
         {'key': 50, 'label': '50%', 'value': 2},
     ]
+    assert progress_chart['chart_type'] == 'scatter'
+    assert 'orientation' not in progress_chart
+    assert b'data-chart-type="scatter"' in response.content
     assert 'Private current project' not in str(progress_chart)
+
+
+@pytest.mark.django_db
+@override_settings(RDMO_STATISTICS={'project_progress': {'chart_type': 'bar', 'orientation': 'vertical'}})
+def test_project_progress_can_be_rendered_as_bars(client):
+    current_site = Site.objects.get_current()
+    manager = get_user_model().objects.create_user(username='bar-progress-manager')
+    manager.role.manager.add(current_site)
+    Project.objects.create(site=current_site, title='Progress project', progress_count=1, progress_total=2)
+    client.force_login(manager)
+
+    response = client.get(reverse('statistics:index'))
+    progress_chart = next(chart for chart in response.context['category_charts'] if chart['key'] == 'project-progress')
+
+    assert progress_chart['chart_type'] == 'bar'
+    assert progress_chart['orientation'] == 'vertical'
+    assert b'data-chart-type="bar"' in response.content
+    assert b'data-chart-orientation="vertical"' in response.content
 
 
 @pytest.mark.django_db

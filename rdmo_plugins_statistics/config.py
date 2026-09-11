@@ -55,6 +55,7 @@ CATEGORY_CHART_DEFINITION = {
     'catalogs': {
         'key': 'catalog',
         'type': 'category',
+        'chart_type': 'bar',
         'bar_color': '#a8d37d',
         'dataset_label': _('Number of projects'),
         'label_orientation': 'horizontal',
@@ -67,6 +68,7 @@ CATEGORY_CHART_DEFINITION = {
     'project_progress': {
         'key': 'project-progress',
         'type': 'category',
+        'chart_type': 'scatter',
         'bar_color': '#e6a15c',
         'dataset_label': _('Number of projects'),
         'label_orientation': 'horizontal',

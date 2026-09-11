@@ -78,12 +78,24 @@ def compute_time_chart(name, definition, statistics, total, custom_settings):
 
 def compute_category_chart(name, definition, statistics, custom_settings):
     chart_settings = get_chart_settings(name, CATEGORY_CHART_SETTINGS, custom_settings)
+    chart_type = definition['chart_type']
+
+    if name == 'project_progress':
+        chart_type = custom_settings.get(name, {}).get('chart_type', chart_type)
+
+    if chart_type not in ('bar', 'scatter'):
+        raise ValueError(f'Unsupported project progress chart type: {chart_type}')
 
     chart = {
         **definition,
         **chart_settings,
+        'chart_type': chart_type,
         'statistics': statistics,
     }
+
+    if chart_type == 'scatter':
+        chart.pop('orientation', None)
+        return chart
 
     opposite_orientation = {
         'horizontal': 'vertical',
