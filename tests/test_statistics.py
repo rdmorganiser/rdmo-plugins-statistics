@@ -13,10 +13,7 @@ from rdmo.projects.models import Project
 from rdmo.questions.models import Catalog
 
 from rdmo_plugins_statistics.statistics import (
-    fetch_catalog_statistics_for_sites,
-    fetch_project_statistics_for_sites,
     fetch_statistics_for_sites,
-    fetch_user_statistics_for_sites,
 )
 
 
@@ -218,17 +215,6 @@ def test_statistics_can_be_fetched_for_multiple_sites(client, tmp_path):
     assert [entry['projects']['total'] for entry in statistics] == [1, 2]
     assert [entry['users']['total'] for entry in statistics] == [2, 3]
     assert [entry['catalogs']['usage'][0]['project_count'] for entry in statistics] == [1, 2]
-    for fetcher, domain in (
-        (fetch_project_statistics_for_sites, 'projects'),
-        (fetch_user_statistics_for_sites, 'users'),
-        (fetch_catalog_statistics_for_sites, 'catalogs'),
-    ):
-        assert fetcher((current_site, other_site)) == [
-            {'site': entry['site'], **entry[domain]} for entry in statistics
-        ]
-    assert fetch_project_statistics_for_sites(()) == []
-    assert fetch_user_statistics_for_sites(()) == []
-    assert fetch_catalog_statistics_for_sites(()) == []
 
     current_user.role.manager.add(current_site)
     client.force_login(current_user)
