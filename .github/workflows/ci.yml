@@ -9,6 +9,7 @@ on:
     paths:
       - '.github/workflows/**'
       - 'rdmo_plugins_statistics/**'
+      - 'scripts/**'
       - 'tests/**'
       - .pre-commit-config.yaml
       - pyproject.toml
@@ -35,7 +36,7 @@ jobs:
       with:
         python-version: "3.12"
         cache: pip
-    - run: python -m pip install --upgrade pip setuptools wheel
+    - run: python -m pip install --upgrade pip
     - run: python -m pip install -e .[dev]
     - name: Set up pre-commit cache
       uses: actions/cache@v3
@@ -78,13 +79,21 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install --upgrade pip setuptools wheel
+      - run: python -m pip install --upgrade pip
       - name: Install RDMO target
         run: python -m pip install "${{ matrix.rdmo }}"
       - name: Install plugin
         run: python -m pip install -e '.[dev]'
       - name: Run tests
         run: pytest
+      - name: Build wheel
+        run: python -m pip wheel --no-deps . --wheel-dir dist
+      - name: Verify wheel assets
+        run: |
+          unzip -l dist/*.whl | grep -q 'rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html'
+          unzip -l dist/*.whl | grep -q 'rdmo_plugins_statistics/locale/de/LC_MESSAGES/django.mo'
+          unzip -l dist/*.whl | grep -q 'rdmo_plugins_statistics/static/rdmo_plugins_statistics/css/statistics.css'
+          unzip -l dist/*.whl | grep -q 'rdmo_plugins_statistics/static/rdmo_plugins_statistics/js/chart.umd.min.js'
 
   required-checks-pass:
     if: always()
