@@ -283,9 +283,7 @@ const statisticsTypes = {
     },
 
     category: {
-        getRows: (statistics) => {
-            return [...statistics.rows].sort((a, b) => b.value - a.value)
-        },
+        getRows: (statistics) => [...statistics.rows],
 
         getDisplayLabel: (row) => {
             return `${row.label}${row.label_suffix || ''}`
@@ -378,7 +376,7 @@ const drawValueLabelsPlugin = {
     }
 }
 
-const getChartDataset = (container, preparedData) => {
+const getBarChartDataset = (container, preparedData) => {
     return {
         label: container.dataset.datasetLabel,
         data: preparedData.rows.map((row) => row.value),
@@ -464,7 +462,7 @@ const createBarChart = (chartElement, container, preparedData) => {
         data: {
             labels: preparedData.displayLabels,
             datasets: [
-                getChartDataset(container, preparedData)
+                getBarChartDataset(container, preparedData)
             ]
         },
 
@@ -474,6 +472,79 @@ const createBarChart = (chartElement, container, preparedData) => {
 
         options: getChartOptions(container, preparedData, isHorizontal)
     })
+}
+
+const getScatterChartOptions = () => {
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+
+        layout: {
+            padding: {
+                top: 20
+            }
+        },
+
+        plugins: {
+            legend: {
+                display: false
+            },
+
+            tooltip: {
+                displayColors: false
+            }
+        },
+
+        scales: {
+            x: {
+                type: 'linear',
+                min: 0,
+                max: 100,
+                ticks: {
+                    callback: (value) => `${value}%`
+                }
+            },
+
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    precision: 0
+                }
+            }
+        }
+    }
+}
+
+const createScatterChart = (chartElement, container, preparedData) => {
+    return new Chart(chartElement, {
+        type: 'scatter',
+
+        data: {
+            datasets: [
+                {
+                    label: container.dataset.datasetLabel,
+                    data: preparedData.rows.map((row) => ({
+                        x: Number(row.key),
+                        y: row.value
+                    })),
+                    backgroundColor: container.dataset.barColor,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    showLine: false
+                }
+            ]
+        },
+
+        options: getScatterChartOptions()
+    })
+}
+
+const createChart = (chartElement, container, preparedData) => {
+    if (container.dataset.chartType === 'scatter') {
+        return createScatterChart(chartElement, container, preparedData)
+    }
+
+    return createBarChart(chartElement, container, preparedData)
 }
 
 const getTimeChartControls = (container) => {
@@ -559,6 +630,16 @@ const addTimeChartListeners = (controls, updateChart) => {
     })
 }
 
+const escapeCsvCell = (value) => {
+    let text = String(value)
+
+    if (typeof value === 'string' && /^[=+\-@\t\r]/.test(text)) {
+        text = `'${text}`
+    }
+
+    return `"${text.replaceAll('"', '""')}"`
+}
+
 const downloadCsv = (container, filters, preparedData) => {
     const isHorizontal = container.dataset.chartOrientation === 'horizontal'
 
@@ -580,11 +661,7 @@ const downloadCsv = (container, filters, preparedData) => {
     ]
 
     const csv = csvRows
-        .map((row) => (
-            row
-                .map((value) => `"${String(value).replaceAll('"', '""')}"`)
-                .join(',')
-        ))
+        .map((row) => row.map(escapeCsvCell).join(','))
         .join('\n')
 
     const name = container.dataset.statisticsId
@@ -647,11 +724,11 @@ const createStatisticsChart = (container) => {
 
     updateTotal(totalElement, initialData.rows)
 
-    if (statisticsTypeName === 'category') {
+    if (statisticsTypeName === 'category' && container.dataset.chartType === 'bar') {
         setCategoryChartSize(container, initialData.rows)
     }
 
-    const chart = createBarChart(chartElement, container, initialData)
+    const chart = createChart(chartElement, container, initialData)
 
     const updateChart = () => {
         const preparedData = getPreparedData()

@@ -9,8 +9,11 @@ on:
     paths:
       - '.github/workflows/**'
       - 'rdmo_plugins_statistics/**'
+      - 'scripts/**'
+      - 'tests/**'
       - .pre-commit-config.yaml
       - pyproject.toml
+      - README.md
 
 # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
@@ -33,7 +36,7 @@ jobs:
       with:
         python-version: "3.12"
         cache: pip
-    - run: python -m pip install --upgrade pip setuptools wheel
+    - run: python -m pip install --upgrade pip
     - run: python -m pip install -e .[dev]
     - name: Set up pre-commit cache
       uses: actions/cache@v3
@@ -59,11 +62,45 @@ jobs:
       - run: python -Im pip install -e .[dev]
       - run: python -Ic 'import rdmo_plugins_statistics; print(rdmo_plugins_statistics.__version__)'
 
+  test:
+    name: "Test (${{ matrix.name }})"
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: RDMO 2.5
+            rdmo: "rdmo>=2.5,<3"
+          - name: RDMO 3.0 release branch
+            rdmo: "rdmo @ git+https://github.com/rdmorganiser/rdmo.git@3.0.0/release"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - name: Install RDMO target
+        run: python -m pip install "${{ matrix.rdmo }}"
+      - name: Install plugin
+        run: python -m pip install -e '.[dev]'
+      - name: Run tests
+        run: pytest
+      - name: Build wheel
+        run: python -m pip wheel --no-deps . --wheel-dir dist
+      - name: Verify wheel assets
+        run: |
+          unzip -l dist/*.whl | grep -q 'rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html'
+          unzip -l dist/*.whl | grep -q 'rdmo_plugins_statistics/locale/de/LC_MESSAGES/django.mo'
+          unzip -l dist/*.whl | grep -q 'rdmo_plugins_statistics/static/rdmo_plugins_statistics/css/statistics.css'
+          unzip -l dist/*.whl | grep -q 'rdmo_plugins_statistics/static/rdmo_plugins_statistics/js/chart.umd.min.js'
+
   required-checks-pass:
     if: always()
     needs:
       - lint
       - dev-setup
+      - test
     runs-on: ubuntu-22.04
     steps:
       - uses: re-actors/alls-green@release/v1

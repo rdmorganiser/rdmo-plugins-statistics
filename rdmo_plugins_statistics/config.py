@@ -1,23 +1,21 @@
 from django.utils.translation import gettext_lazy as _
 
-TIME_CHART_SETTINGS = {
+TIME_CHART_SETTINGS = (
     'bar_color',
     'empty_periods',
     'label_orientation',
-}
+)
 
-CATEGORY_CHART_SETTINGS = {
+CATEGORY_CHART_SETTINGS = (
     'bar_color',
     'label_orientation',
     'orientation',
-}
+)
 
 TIME_CHART_DEFINITION = {
     'projects': {
         'key': 'project',
         'type': 'time',
-        'query_key': 'project',
-        'date_field': 'created',
         'calculation': 'period_count',
         'bar_color': '#7eafe0',
         'dataset_label': _('Number of projects'),
@@ -30,8 +28,6 @@ TIME_CHART_DEFINITION = {
     'users': {
         'key': 'user',
         'type': 'time',
-        'query_key': 'user',
-        'date_field': 'date_joined',
         'calculation': 'period_count',
         'bar_color': '#65c5c4',
         'dataset_label': _('Number of registered users'),
@@ -44,8 +40,6 @@ TIME_CHART_DEFINITION = {
     'cumulative_users': {
         'key': 'cumulative-user',
         'type': 'time',
-        'query_key': 'user',
-        'date_field': 'date_joined',
         'calculation': 'cumulative_count',
         'bar_color': '#65c5c4',
         'dataset_label': _('Number of users'),
@@ -61,7 +55,7 @@ CATEGORY_CHART_DEFINITION = {
     'catalogs': {
         'key': 'catalog',
         'type': 'category',
-        'query_key': 'catalog',
+        'chart_type': 'bar',
         'bar_color': '#a8d37d',
         'dataset_label': _('Number of projects'),
         'label_orientation': 'horizontal',
@@ -74,13 +68,13 @@ CATEGORY_CHART_DEFINITION = {
     'project_progress': {
         'key': 'project-progress',
         'type': 'category',
-        'query_key': 'project-progress',
+        'chart_type': 'scatter',
         'bar_color': '#e6a15c',
-        'dataset_label': _('Progress (%)'),
+        'dataset_label': _('Number of projects'),
         'label_orientation': 'horizontal',
-        'orientation': 'horizontal',
+        'orientation': 'vertical',
         'title': _('Project progress'),
         'x_axis_title': _('Progress (%)'),
-        'y_axis_title': _('Project'),
+        'y_axis_title': _('Number of projects'),
     },
 }
