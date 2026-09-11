@@ -2,7 +2,6 @@ from django.urls import include, path
 
 from rdmo.core.views import home
 
-
 urlpatterns = [
     path('', home, name='home'),
     path('', include('rdmo.core.urls')),

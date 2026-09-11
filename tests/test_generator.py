@@ -1,4 +1,5 @@
 import json
+from contextlib import redirect_stdout
 from datetime import datetime, timezone
 from io import StringIO
 
@@ -17,7 +18,7 @@ from rdmo.questions.models import Catalog, Page, Question, QuestionSet, Section
 
 from model_bakery import baker
 
-from rdmo_plugins_statistics.testing import create_test_projects
+from tests.helpers import create_test_projects
 
 pytestmark = pytest.mark.django_db
 
@@ -113,8 +114,15 @@ def test_command_and_validation(fixture_catalog):
     site, owner, catalog, page = fixture_catalog
     question(page, 'text')
     out = StringIO()
-    call_command('create_statistics_test_projects', catalog_id=catalog.pk, owner=[owner.username],
-                 count=1, batch_label='command', answer_fraction=(0, 0), stdout=out)
+    with redirect_stdout(out):
+        call_command(
+            'runscript',
+            'tests.scripts.bake_test_projects',
+            script_args=[
+                f'--catalog-id {catalog.pk} --owner {owner.username} '
+                '--count 1 --batch-label command --answer-fraction 0 0'
+            ],
+        )
     report = json.loads(out.getvalue())[0]
     assert report['value_count'] == 0
     assert report['progress_total'] == 1

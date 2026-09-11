@@ -1,4 +1,5 @@
 import json
+from contextlib import redirect_stdout
 from datetime import datetime, timezone
 from io import StringIO
 
@@ -8,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
 from django.core.management import call_command
 
-from rdmo_plugins_statistics.testing import create_test_users
+from tests.helpers import create_test_users
 
 pytestmark = pytest.mark.django_db
 
@@ -61,15 +62,14 @@ def test_create_test_users_is_reproducible_and_rejects_duplicate_batch():
     assert get_user_model().objects.count() == 4
 
 
-def test_create_statistics_test_users_command():
+def test_bake_test_users_script():
     out = StringIO()
-    call_command(
-        'create_statistics_test_users',
-        count=2,
-        batch_label='command-users',
-        active_fraction=0,
-        stdout=out,
-    )
+    with redirect_stdout(out):
+        call_command(
+            'runscript',
+            'tests.scripts.bake_test_users',
+            script_args=['--count 2 --batch-label command-users --active-fraction 0'],
+        )
     reports = json.loads(out.getvalue())
     assert len(reports) == 2
     assert not any(item['is_active'] for item in reports)

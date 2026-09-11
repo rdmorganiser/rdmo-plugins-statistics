@@ -12,13 +12,7 @@ from rdmo.projects.answers import AnswerTree
 from rdmo.projects.models import Membership, Project, Value
 from rdmo.projects.progress import compute_progress
 
-
-def _baker():
-    try:
-        from model_bakery import baker
-    except ImportError as exc:
-        raise RuntimeError("Install rdmo-plugins-statistics[fixtures] to generate test data.") from exc
-    return baker
+from model_bakery import baker
 
 
 def _range(value, minimum, maximum, name):
@@ -66,7 +60,6 @@ def create_test_users(
     Passwords are deliberately unusable. Role fractions are independent, so a user
     can receive more than one site role. The whole user batch is atomic.
     """
-    baker = _baker()
     User = get_user_model()
     if not isinstance(count, int) or count < 1:
         raise ValueError('count must be a positive integer.')
@@ -196,7 +189,6 @@ def fill_project_interview(project, *, seed=42, answer_fraction=1, collection_si
     Overrides map question URIs to Value payloads (text, option, external_id).
     Questions are attempted once per location; hidden questions are revisited.
     """
-    baker = _baker()
     fraction = _range(answer_fraction, 0, 1, 'answer_fraction')
     sizes = _range(collection_size, 1, 20, 'collection_size')
     if any(not isinstance(size, int) for size in sizes):
@@ -287,7 +279,6 @@ def create_test_projects(*, catalog, site, owners, members=(), count=10, seed=42
     Each project is atomic. Earlier projects remain if a later project fails.
     Repeating a batch label is rejected, preventing accidental duplicate runs.
     """
-    baker = _baker()
     owners, members = list(owners), list(members)
     if not isinstance(count, int) or count < 1 or not owners:
         raise ValueError('Supply a positive count and at least one owner.')
