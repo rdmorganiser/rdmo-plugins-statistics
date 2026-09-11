@@ -283,9 +283,7 @@ const statisticsTypes = {
     },
 
     category: {
-        getRows: (statistics) => {
-            return [...statistics.rows].sort((a, b) => b.value - a.value)
-        },
+        getRows: (statistics) => [...statistics.rows],
 
         getDisplayLabel: (row) => {
             return `${row.label}${row.label_suffix || ''}`
@@ -559,6 +557,16 @@ const addTimeChartListeners = (controls, updateChart) => {
     })
 }
 
+const escapeCsvCell = (value) => {
+    let text = String(value)
+
+    if (typeof value === 'string' && /^[=+\-@\t\r]/.test(text)) {
+        text = `'${text}`
+    }
+
+    return `"${text.replaceAll('"', '""')}"`
+}
+
 const downloadCsv = (container, filters, preparedData) => {
     const isHorizontal = container.dataset.chartOrientation === 'horizontal'
 
@@ -580,11 +588,7 @@ const downloadCsv = (container, filters, preparedData) => {
     ]
 
     const csv = csvRows
-        .map((row) => (
-            row
-                .map((value) => `"${String(value).replaceAll('"', '""')}"`)
-                .join(',')
-        ))
+        .map((row) => row.map(escapeCsvCell).join(','))
         .join('\n')
 
     const name = container.dataset.statisticsId
