@@ -474,7 +474,27 @@ const createBarChart = (chartElement, container, preparedData) => {
     })
 }
 
-const getScatterChartOptions = () => {
+const getPercentageScale = () => {
+    return {
+        type: 'linear',
+        min: 0,
+        max: 100,
+        ticks: {
+            callback: (value) => `${value}%`
+        }
+    }
+}
+
+const getCountScale = () => {
+    return {
+        beginAtZero: true,
+        ticks: {
+            precision: 0
+        }
+    }
+}
+
+const getScatterChartOptions = (isHorizontal) => {
     return {
         responsive: true,
         maintainAspectRatio: false,
@@ -496,26 +516,15 @@ const getScatterChartOptions = () => {
         },
 
         scales: {
-            x: {
-                type: 'linear',
-                min: 0,
-                max: 100,
-                ticks: {
-                    callback: (value) => `${value}%`
-                }
-            },
-
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    precision: 0
-                }
-            }
+            x: isHorizontal ? getCountScale() : getPercentageScale(),
+            y: isHorizontal ? getPercentageScale() : getCountScale()
         }
     }
 }
 
 const createScatterChart = (chartElement, container, preparedData) => {
+    const isHorizontal = container.dataset.chartOrientation === 'horizontal'
+
     return new Chart(chartElement, {
         type: 'scatter',
 
@@ -523,10 +532,17 @@ const createScatterChart = (chartElement, container, preparedData) => {
             datasets: [
                 {
                     label: container.dataset.datasetLabel,
-                    data: preparedData.rows.map((row) => ({
-                        x: Number(row.key),
-                        y: row.value
-                    })),
+                    data: preparedData.rows.map((row) => (
+                        isHorizontal
+                            ? {
+                                x: row.value,
+                                y: Number(row.key)
+                            }
+                            : {
+                                x: Number(row.key),
+                                y: row.value
+                            }
+                    )),
                     backgroundColor: container.dataset.barColor,
                     pointRadius: 5,
                     pointHoverRadius: 7,
@@ -535,7 +551,7 @@ const createScatterChart = (chartElement, container, preparedData) => {
             ]
         },
 
-        options: getScatterChartOptions()
+        options: getScatterChartOptions(isHorizontal)
     })
 }
 

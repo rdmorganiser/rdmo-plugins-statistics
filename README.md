@@ -1,6 +1,6 @@
 # RDMO Statistics Plugin
 
-The RDMO Statistics Plugin adds a statistics page to RDMO and displays project, user, catalog usage, and project progress data as bar charts.
+The RDMO Statistics Plugin adds a statistics page to RDMO and displays project, user, catalog usage, and project progress data as charts.
 
 ## Features
 
@@ -114,7 +114,6 @@ RDMO_STATISTICS = {
     },
     'project_progress': {
         'bar_color': '#e6a15c',
-        'chart_type': 'scatter',
         'label_orientation': 'horizontal',
         'orientation': 'vertical',
     },
@@ -127,9 +126,8 @@ Currently, the following configuration options are supported:
 
 - `bar_color`
 - `empty_periods` (time-based charts): include periods without new records when set to `True`
-- `label_orientation`
-- `orientation` (category charts): display bars `horizontal` or `vertical`
-- `chart_type` (project progress): display an unconnected `scatter` plot or `bar` chart
+- `label_orientation` (bar charts)
+- `orientation` (category charts): display charts `horizontal` or `vertical`
 
 ## Displayed Statistics
 
@@ -162,7 +160,7 @@ Catalogs assigned to the current site are displayed together with the number of 
 
 ### Project progress
 
-The project-progress chart groups all projects belonging to the current site by their rounded progress percentage. It defaults to an unconnected scatter plot with a fixed 0–100% horizontal axis and the number of projects on the vertical axis. Set `chart_type` to `bar` to use bars; `orientation` applies only in that mode. Projects whose interview has not started are included at 0%.
+The project-progress scatter chart groups all projects belonging to the current site by their rounded progress percentage. It uses a fixed 0–100% percentage axis and shows the number of projects at each percentage. Projects whose interview has not started are included at 0%.
 
 ## Frontend implementation
 
