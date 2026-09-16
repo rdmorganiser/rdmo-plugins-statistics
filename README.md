@@ -93,27 +93,27 @@ The default chart configuration is:
 ```python
 RDMO_STATISTICS = {
     'projects': {
-        'bar_color': '#7eafe0',
+        'chart_color': '#7eafe0',
         'empty_periods': True,
         'label_orientation': 'auto',
     },
     'users': {
-        'bar_color': '#65c5c4',
+        'chart_color': '#65c5c4',
         'empty_periods': True,
         'label_orientation': 'auto',
     },
     'cumulative_users': {
-        'bar_color': '#65c5c4',
+        'chart_color': '#65c5c4',
         'empty_periods': True,
         'label_orientation': 'auto',
     },
     'catalogs': {
-        'bar_color': '#a8d37d',
+        'chart_color': '#a8d37d',
         'label_orientation': 'auto',
         'orientation': 'horizontal',
     },
     'project_progress': {
-        'bar_color': '#e6a15c',
+        'chart_color': '#e6a15c',
         'orientation': 'vertical',
     },
 }
@@ -125,7 +125,7 @@ The time-based charts and catalog usage are displayed as bar charts. Project pro
 
 Currently, the following configuration options are supported:
 
-- `bar_color`
+- `chart_color`
 - `empty_periods` (time-based charts): include periods without new records when set to `True`
 - `label_orientation`: `auto`, `horizontal` or `vertical` (only effective on vertical bar charts)
 - `orientation` (category charts): display charts `horizontal` or `vertical`

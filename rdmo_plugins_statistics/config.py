@@ -1,13 +1,13 @@
 from django.utils.translation import gettext_lazy as _
 
 TIME_CHART_SETTINGS = (
-    'bar_color',
+    'chart_color',
     'empty_periods',
     'label_orientation',
 )
 
 CATEGORY_CHART_SETTINGS = (
-    'bar_color',
+    'chart_color',
     'label_orientation',
     'orientation',
 )
@@ -17,7 +17,7 @@ TIME_CHART_DEFINITION = {
         'key': 'project',
         'type': 'time',
         'calculation': 'period_count',
-        'bar_color': '#7eafe0',
+        'chart_color': '#7eafe0',
         'dataset_label': _('Number of projects'),
         'empty_periods': True,
         'label_orientation': 'auto',
@@ -29,7 +29,7 @@ TIME_CHART_DEFINITION = {
         'key': 'user',
         'type': 'time',
         'calculation': 'period_count',
-        'bar_color': '#65c5c4',
+        'chart_color': '#65c5c4',
         'dataset_label': _('Number of registered users'),
         'empty_periods': True,
         'label_orientation': 'auto',
@@ -41,7 +41,7 @@ TIME_CHART_DEFINITION = {
         'key': 'cumulative-user',
         'type': 'time',
         'calculation': 'cumulative_count',
-        'bar_color': '#65c5c4',
+        'chart_color': '#65c5c4',
         'dataset_label': _('Number of users'),
         'empty_periods': True,
         'label_orientation': 'auto',
@@ -56,7 +56,7 @@ CATEGORY_CHART_DEFINITION = {
         'key': 'catalog',
         'type': 'category',
         'chart_type': 'bar',
-        'bar_color': '#a8d37d',
+        'chart_color': '#a8d37d',
         'dataset_label': _('Number of projects'),
         'label_orientation': 'auto',
         'note': _('* unavailable'),
@@ -69,7 +69,7 @@ CATEGORY_CHART_DEFINITION = {
         'key': 'project-progress',
         'type': 'category',
         'chart_type': 'scatter',
-        'bar_color': '#e6a15c',
+        'chart_color': '#e6a15c',
         'dataset_label': _('Number of projects'),
         'orientation': 'vertical',
         'title': _('Project progress'),
