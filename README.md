@@ -126,7 +126,7 @@ Currently, the following configuration options are supported:
 
 - `bar_color`
 - `empty_periods` (time-based charts): include periods without new records when set to `True`
-- `label_orientation` (bar charts)
+- `label_orientation`
 - `orientation` (category charts): display charts `horizontal` or `vertical`
 
 ## Displayed Statistics
