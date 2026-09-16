@@ -209,7 +209,7 @@ The frontend code:
 - Updates charts without reloading the page
 - Stores the selected interval and date filters in `localStorage`
 - Draws values above vertical bars or beside horizontal bars
-- Sizes and scrolls bar charts according to their orientation and number of entries
+- Sizes and scrolls category bar charts according to their orientation and number of entries
 - Exports the currently displayed chart data as CSV
 
 ## Migration from earlier versions
