@@ -109,12 +109,11 @@ RDMO_STATISTICS = {
     },
     'catalogs': {
         'bar_color': '#a8d37d',
-        'label_orientation': 'horizontal',
+        'label_orientation': 'auto',
         'orientation': 'horizontal',
     },
     'project_progress': {
         'bar_color': '#e6a15c',
-        'label_orientation': 'horizontal',
         'orientation': 'vertical',
     },
 }
@@ -122,11 +121,13 @@ RDMO_STATISTICS = {
 
 The chart configuration can be overridden in `rdmo-app/config/settings/local.py` using the optional `RDMO_STATISTICS` setting. Only the values that should differ from the defaults need to be specified.
 
+The time-based charts and catalog usage are displayed as bar charts. Project progress is displayed as a scatter chart.
+
 Currently, the following configuration options are supported:
 
 - `bar_color`
 - `empty_periods` (time-based charts): include periods without new records when set to `True`
-- `label_orientation`
+- `label_orientation`: `auto`, `horizontal` or `vertical` (only effective on vertical bar charts)
 - `orientation` (category charts): display charts `horizontal` or `vertical`
 
 ## Displayed Statistics
