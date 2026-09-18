@@ -1,51 +1,59 @@
-from django_filters.rest_framework import DjangoFilterBackend
-from django.contrib.auth import get_user_model
+from django.contrib.sites.models import Site
 
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rdmo.core.permissions import HasPermission
 
-from rdmo.accounts.viewsets import UserViewSetMixin
-from rdmo.core.permissions import HasModelPermission
-from rdmo.projects.permissions import HasProjectsPermission
-from rdmo.projects.models.project import Project
+from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
-from .serializers.users import AnonymousUserStatisticsSerializer
-from .serializers.projects import ProjectStatisticsSerializer
+from .serializers import (
+    CatalogStatisticsSerializer,
+    ProjectStatisticsSerializer,
+    StatisticsSerializer,
+    UserStatisticsSerializer,
+)
+from .statistics import (
+    fetch_catalog_statistics,
+    fetch_project_statistics,
+    fetch_statistics,
+    fetch_user_statistics,
+)
 
-class StatisticalUserViewSet(UserViewSetMixin, ReadOnlyModelViewSet):
-    permission_classes = (HasModelPermission | HasProjectsPermission, )
-    # queryset = get_user_model().objects.all()
-    serializer_class = AnonymousUserStatisticsSerializer
 
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = (
-        'role__member',
-    )
+class StatisticsViewSet(GenericViewSet):
+    permission_classes = (HasPermission,)
+    permission_required = 'statistics.view_statistics'
+    serializer_class = StatisticsSerializer
 
-    def get_queryset(self):
-        return self.get_users_for_user(self.request.user) \
-                   .prefetch_related('groups',
-                                     'role__member', 'role__manager',
-                                     'role__editor', 'role__reviewer',
-                                     'memberships')
+    def list(self, request, *args, **kwargs):
+        statistics = fetch_statistics(Site.objects.get_current())
+        return Response(self.get_serializer(statistics).data)
 
-class StatisticalProjectViewSet(ReadOnlyModelViewSet):
-    permission_classes = (HasModelPermission | HasProjectsPermission, )
+
+class ProjectStatisticsViewSet(GenericViewSet):
+    permission_classes = (HasPermission,)
+    permission_required = 'statistics.view_statistics'
     serializer_class = ProjectStatisticsSerializer
 
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = (
-        'site',
-    )
+    def list(self, request, *args, **kwargs):
+        statistics = fetch_project_statistics(Site.objects.get_current())
+        return Response(self.get_serializer(statistics).data)
 
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_authenticated:
-            if user.has_perm('projects.view_project'):
-                return Project.objects.all().select_related('catalog')
-            elif user.role.manager.exists():
-                return Project.objects.filter(site__in=user.role.manager.all())
-            else:
-                return Project.objects.filter_user(self.request.user).distinct().select_related('catalog', 'site')
-        else:
-            return Project.objects.none()
 
+class UserStatisticsViewSet(GenericViewSet):
+    permission_classes = (HasPermission,)
+    permission_required = 'statistics.view_statistics'
+    serializer_class = UserStatisticsSerializer
+
+    def list(self, request, *args, **kwargs):
+        statistics = fetch_user_statistics(Site.objects.get_current())
+        return Response(self.get_serializer(statistics).data)
+
+
+class CatalogStatisticsViewSet(GenericViewSet):
+    permission_classes = (HasPermission,)
+    permission_required = 'statistics.view_statistics'
+    serializer_class = CatalogStatisticsSerializer
+
+    def list(self, request, *args, **kwargs):
+        statistics = fetch_catalog_statistics(Site.objects.get_current())
+        return Response(self.get_serializer(statistics).data)
