@@ -1,6 +1,7 @@
 const CUMULATIVE_CALCULATION = 'cumulative_count'
 
 const TIME_INTERVALS = ['day', 'month', 'quarter', 'year']
+const DEFAULT_TIME_INTERVAL = 'month'
 const TIME_STORAGE_KEYS = {
     interval: 'rdmo-statistics-interval',
     start: 'rdmo-statistics-start',
@@ -20,7 +21,7 @@ const HORIZONTAL_CATEGORY_SIZE = 32
 const VERTICAL_CATEGORY_SIZE = 40
 
 const updateClearDatesButton = (button, filters) => {
-    button.disabled = !filters.start && !filters.end
+    button.disabled = !filters.start && !filters.end && filters.interval === DEFAULT_TIME_INTERVAL
 }
 
 const getDateDisplayLabel = (row, interval) => {
@@ -302,7 +303,7 @@ const statisticsTypes = {
     category: {
         getRows: (statistics) => [...statistics.rows],
 
-        hasData: (_statistics, _filters, _container, rows) => rows.length > 0,
+        hasData: (_statistics, _filters, _container, rows) => rows.some((row) => row.value > 0),
 
         getDisplayLabel: (row) => {
             return `${row.label}${row.label_suffix || ''}`
@@ -574,7 +575,7 @@ const createTimeFilterControls = () => {
             'interval',
             TIME_STORAGE_KEYS.interval,
             (value) => TIME_INTERVALS.includes(value),
-            'month',
+            DEFAULT_TIME_INTERVAL,
         ),
         start: getInitialFilterValue(
             parameters,
@@ -662,8 +663,10 @@ const createTimeFilterControls = () => {
     })
 
     clearDatesButton.addEventListener('click', () => {
+        intervalSelect.value = DEFAULT_TIME_INTERVAL
         startDateInput.value = ''
         endDateInput.value = ''
+        filters.interval = DEFAULT_TIME_INTERVAL
         filters.start = ''
         filters.end = ''
         notify()
