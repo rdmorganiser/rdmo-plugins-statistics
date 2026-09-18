@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-13 13:01+0200\n"
+"POT-Creation-Date: 2026-09-18 10:55+0200\n"
 "PO-Revision-Date: 2026-08-13 13:04+0200\n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -19,63 +19,83 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Poedit 3.9\n"
 
-#: apps.py:11
-msgid "Statistics"
-msgstr "Statistiken"
-
-#: config.py:23 config.py:26 config.py:28 config.py:66 config.py:71
+#: rdmo_plugins_statistics/config.py:27 rdmo_plugins_statistics/config.py:33
+#: rdmo_plugins_statistics/config.py:69 rdmo_plugins_statistics/config.py:75
+#: rdmo_plugins_statistics/config.py:83 rdmo_plugins_statistics/config.py:90
 msgid "Number of projects"
 msgstr "Anzahl Projekte"
 
-#: config.py:27
-msgid "Created"
-msgstr "Erstellt"
+#: rdmo_plugins_statistics/config.py:29
+msgid "No projects were found for this period."
+msgstr "Für diesen Zeitraum wurden keine Projekte gefunden."
 
-#: config.py:37 config.py:40 config.py:42
+#: rdmo_plugins_statistics/config.py:31
+#| msgid "Number of users over time"
+msgid "Number of projects over time"
+msgstr "Anzahl der Projekte im Zeitverlauf"
+
+#: rdmo_plugins_statistics/config.py:32
+msgid "Date of creation"
+msgstr "Erstellungsdatum"
+
+#: rdmo_plugins_statistics/config.py:40 rdmo_plugins_statistics/config.py:46
 msgid "Number of registered users"
 msgstr "Anzahl registrierter Nutzer"
 
-#: config.py:41
-msgid "Registered"
-msgstr "Registriert"
+#: rdmo_plugins_statistics/config.py:42
+msgid "No user registrations were found for this period."
+msgstr "Für diesen Zeitraum wurden keine Nutzerregistrierungen gefunden."
 
-#: config.py:51 config.py:56
+#: rdmo_plugins_statistics/config.py:44
+#| msgid "Number of registered users"
+msgid "Number of registered users over time"
+msgstr "Anzahl der registrierten Nutzer im Zeitverlauf"
+
+#: rdmo_plugins_statistics/config.py:45 rdmo_plugins_statistics/config.py:58
+msgid "Date of registration"
+msgstr "Registrierungsdatum"
+
+#: rdmo_plugins_statistics/config.py:53 rdmo_plugins_statistics/config.py:59
 msgid "Number of users"
 msgstr "Anzahl Nutzer"
 
-#: config.py:54
+#: rdmo_plugins_statistics/config.py:55
+msgid "No user data is available for this period."
+msgstr "Für diesen Zeitraum sind keine Nutzerdaten verfügbar."
+
+#: rdmo_plugins_statistics/config.py:57
 msgid "Total users"
-msgstr "Summierte Nutzer"
+msgstr "Gesamtzahl der Nutzer"
 
-#: config.py:55
-msgid "Date"
-msgstr "Datum"
+#: rdmo_plugins_statistics/config.py:70
+msgid "No catalog usage data is available."
+msgstr "Es sind keine Daten zur Katalognutzung verfügbar."
 
-#: config.py:68
+#: rdmo_plugins_statistics/config.py:72
 msgid "* unavailable"
 msgstr "* nicht verfügbar"
 
-#: config.py:70
+#: rdmo_plugins_statistics/config.py:74
 msgid "Catalog usage"
 msgstr "Katalognutzung"
 
-#: config.py:72
+#: rdmo_plugins_statistics/config.py:76
 msgid "Catalog"
 msgstr "Katalog"
 
-#: config.py:79 config.py:83
-msgid "Progress (%)"
-msgstr "Fortschritt (%)"
+#: rdmo_plugins_statistics/config.py:84
+msgid "No project progress data is available."
+msgstr "Es sind keine Daten zum Projektfortschritt verfügbar."
 
-#: config.py:82
+#: rdmo_plugins_statistics/config.py:88
 msgid "Project progress"
 msgstr "Projektfortschritt"
 
-#: config.py:84
-msgid "Project"
-msgstr "Projekt"
+#: rdmo_plugins_statistics/config.py:89
+msgid "Progress (%)"
+msgstr "Fortschritt (%)"
 
-#: templates/rdmo_plugins_statistics/statistics.html:18
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:13
 #, python-format
 msgid ""
 "\n"
@@ -85,55 +105,112 @@ msgstr ""
 "\n"
 "            Statistiken für %(site_name)s"
 
-#: templates/rdmo_plugins_statistics/statistics.html:47
-#: templates/rdmo_plugins_statistics/statistics.html:145
-msgid "Export CSV"
-msgstr "CSV-Export"
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:18
+msgid "Summary"
+msgstr "Übersicht"
 
-#: templates/rdmo_plugins_statistics/statistics.html:54
-msgid "Clear dates"
-msgstr "Datumsfilter zurücksetzen"
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:20
+msgid "Projects"
+msgstr "Projekte"
 
-#: templates/rdmo_plugins_statistics/statistics.html:58
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:24
+msgid "Users"
+msgstr "Nutzer"
+
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:40
+msgid "The start date must not be after the end date."
+msgstr "Das Startdatum darf nicht nach dem Enddatum liegen."
+
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:42
 msgid "From"
 msgstr "Von"
 
-#: templates/rdmo_plugins_statistics/statistics.html:68
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:45
 msgid "To"
 msgstr "Bis"
 
-#: templates/rdmo_plugins_statistics/statistics.html:78
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:48
 msgid "View by"
 msgstr "Anzeigen nach"
 
-#: templates/rdmo_plugins_statistics/statistics.html:85
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:50
 msgid "Day"
 msgstr "Tag"
 
-#: templates/rdmo_plugins_statistics/statistics.html:86
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:51
 msgid "Month"
 msgstr "Monat"
 
-#: templates/rdmo_plugins_statistics/statistics.html:87
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:52
 msgid "Quarter"
 msgstr "Quartal"
 
-#: templates/rdmo_plugins_statistics/statistics.html:88
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:53
 msgid "Year"
 msgstr "Jahr"
 
-#: templates/rdmo_plugins_statistics/statistics.html:94
-msgid "Total in displayed period"
-msgstr "Gesamt im angezeigten Zeitraum"
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:57
+msgid "Reset"
+msgstr "Zurücksetzen"
 
-#: templates/rdmo_plugins_statistics/statistics.html:100
-msgid "Total in system"
-msgstr "Gesamt im System"
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:85
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:162
+msgid "Export CSV"
+msgstr "CSV-Export"
 
-#: templates/rdmo_plugins_statistics/statistics.html
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:91
+msgid "Displayed"
+msgstr "Angezeigt"
+
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:96
+msgid "Total"
+msgstr "Gesamt"
+
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:118
+#: rdmo_plugins_statistics/templates/rdmo_plugins_statistics/statistics.html:185
+msgid "Show data"
+msgstr "Daten anzeigen"
+
+#~ msgid "Created"
+#~ msgstr "Erstellt"
+
+#~ msgid "Registered"
+#~ msgstr "Registriert"
+
+#~ msgid "Date"
+#~ msgstr "Datum"
+
+#~ msgid "Total in displayed period"
+#~ msgstr "Gesamt im angezeigten Zeitraum"
+
+#~ msgid "Total in system"
+#~ msgstr "Gesamt im System"
+
+#~ msgid "Catalogs in use"
+#~ msgstr "Verwendete Kataloge"
+
+#~ msgid "Complete projects"
+#~ msgstr "Abgeschlossene Projekte"
+
+#~ msgid "Show"
+#~ msgstr "Anzeigen"
+
+#~ msgid "Top 10"
+#~ msgstr "Top 10"
+
+#~ msgid "Top 25"
+#~ msgstr "Top 25"
+
+#~ msgid "All"
+#~ msgstr "Alle"
+
+#~ msgid "Statistics"
+#~ msgstr "Statistiken"
+
+#~ msgid "Clear dates"
+#~ msgstr "Datumsfilter zurücksetzen"
+
 #, python-format
-msgid "Showing at most the %(limit)s most recently created projects."
-msgstr "Es werden höchstens die %(limit)s zuletzt erstellten Projekte angezeigt."
-
-#~ msgid "Number of users over time"
-#~ msgstr "Summierte Nutzer"
+#~ msgid "Showing at most the %(limit)s most recently created projects."
+#~ msgstr ""
+#~ "Es werden höchstens die %(limit)s zuletzt erstellten Projekte angezeigt."

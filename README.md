@@ -1,6 +1,6 @@
 # RDMO Statistics Plugin
 
-The RDMO Statistics Plugin adds a statistics page to RDMO and displays project, user, catalog usage, and project progress data as bar charts.
+The RDMO Statistics Plugin adds a statistics page to RDMO and displays project, user, catalog usage, and project progress data as charts.
 
 ## Features
 
@@ -10,11 +10,14 @@ The statistics page currently provides:
 - Number of newly registered users over time
 - Cumulative total users
 - Catalog usage by number of projects
-- Distribution of projects by progress percentage
+- Distribution of projects by ten-point progress groups
+- Summary cards for projects and users
 - Daily, monthly, quarterly, and yearly aggregation for the time-based charts
-- Optional start and end date filters
+- Shared start and end date filters for all time-based charts
 - Totals for the displayed time range and the system's overall total where applicable
-- Persistent interval and date-filter selection for time-based charts using browser storage
+- Persistent and shareable interval and date-filter selection using browser storage and URL parameters
+- Accessible data tables, semantic tooltips, and explicit empty states for every chart
+- Complete catalog usage display
 - CSV export for every chart
 
 Access to the statistics page is restricted to site managers and controlled by the statistics.view_statistics permission.
@@ -72,12 +75,11 @@ and add the following where the navigation entry should appear:
 
 ```django
 {% has_perm 'statistics.view_statistics' request.user as can_view_statistics %}
+{% url 'statistics:index' as statistics_url %}
 
-{% if can_view_statistics %}
+{% if can_view_statistics and statistics_url %}
 <li>
-    <a href="{% url 'statistics:index' %}">
-        {% trans 'Statistics' %}
-    </a>
+    <a href="{{ statistics_url }}">{% trans 'Statistics' %}</a>
 </li>
 {% endif %}
 ```
@@ -93,43 +95,42 @@ The default chart configuration is:
 ```python
 RDMO_STATISTICS = {
     'projects': {
-        'bar_color': '#7eafe0',
+        'chart_color': '#7eafe0',
         'empty_periods': True,
         'label_orientation': 'auto',
     },
     'users': {
-        'bar_color': '#65c5c4',
+        'chart_color': '#65c5c4',
         'empty_periods': True,
         'label_orientation': 'auto',
     },
     'cumulative_users': {
-        'bar_color': '#65c5c4',
+        'chart_color': '#65c5c4',
         'empty_periods': True,
         'label_orientation': 'auto',
     },
     'catalogs': {
-        'bar_color': '#a8d37d',
-        'label_orientation': 'horizontal',
+        'chart_color': '#a8d37d',
+        'label_orientation': 'auto',
         'orientation': 'horizontal',
     },
     'project_progress': {
-        'bar_color': '#e6a15c',
-        'chart_type': 'scatter',
-        'label_orientation': 'horizontal',
-        'orientation': 'vertical',
+        'chart_color': '#e6a15c',
+        'label_orientation': 'auto',
     },
 }
 ```
 
 The chart configuration can be overridden in `rdmo-app/config/settings/local.py` using the optional `RDMO_STATISTICS` setting. Only the values that should differ from the defaults need to be specified.
 
+All charts are displayed as bar charts. Project progress is always vertical.
+
 Currently, the following configuration options are supported:
 
-- `bar_color`
+- `chart_color`
 - `empty_periods` (time-based charts): include periods without new records when set to `True`
-- `label_orientation`
-- `orientation` (category charts): display bars `horizontal` or `vertical`
-- `chart_type` (project progress): display an unconnected `scatter` plot or `bar` chart
+- `label_orientation`: `auto`, `horizontal` or `vertical` (only effective on vertical bar charts)
+- `orientation` (catalog usage only): display the chart `horizontal` or `vertical`
 
 ## Displayed Statistics
 
@@ -162,7 +163,7 @@ Catalogs assigned to the current site are displayed together with the number of 
 
 ### Project progress
 
-The project-progress chart groups all projects belonging to the current site by their rounded progress percentage. It defaults to an unconnected scatter plot with a fixed 0–100% horizontal axis and the number of projects on the vertical axis. Set `chart_type` to `bar` to use bars; `orientation` applies only in that mode. Projects whose interview has not started are included at 0%.
+The project-progress bar chart groups all projects belonging to the current site into fixed ten-point ranges from 0–9% through 90–99%, with a separate 100% group. The percentage groups are shown on the x-axis and project counts on the y-axis. Projects whose interview has not started are included in the 0–9% group.
 
 ## Frontend implementation
 
@@ -206,12 +207,12 @@ The Django template serializes chart rows with Django's `json_script` filter. Th
 The frontend code:
 
 - Groups daily backend data into the selected interval
-- Filters time-based data by start and end date
+- Filters all time-based charts with one validated date range
 - Updates charts without reloading the page
-- Stores the selected interval and date filters in `localStorage`
+- Stores the selected interval and date filters in `localStorage` and the page URL
 - Draws values above vertical bars or beside horizontal bars
 - Sizes and scrolls bar charts according to their orientation and number of entries
-- Exports the currently displayed chart data as CSV
+- Uses the currently displayed rows for charts, HTML tables, totals, and CSV exports
 
 ## Migration from earlier versions
 
@@ -278,10 +279,11 @@ Remove the package:
 pip uninstall rdmo-plugins-statistics
 ```
 
-Then remove both plugin references from the RDMO configuration:
+Then remove all plugin references from the RDMO configuration:
 
 1. Remove `'rdmo_plugins_statistics'` from `INSTALLED_APPS`.
 2. Remove `path('statistics/', include('rdmo_plugins_statistics.urls'))` from `urlpatterns`.
-3. Remove the Statistics navigation entry from your theme override (`rdmo_theme/templates/core/base_navigation.html`).
+3. Remove `path('api/v1/', include('rdmo_plugins_statistics.urls.v1'))` from `urlpatterns`.
+4. Remove the Statistics navigation entry from your theme override (`rdmo_theme/templates/core/base_navigation.html`).
 
 All entries must be removed. Otherwise, Django will still try to import the uninstalled package and the application will not start.

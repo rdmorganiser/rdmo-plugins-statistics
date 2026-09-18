@@ -13,9 +13,62 @@ from django.utils import timezone
 from rdmo.projects.models import Project
 from rdmo.questions.models import Catalog
 
+from rdmo_plugins_statistics.charts import compute_dashboard_summary, compute_project_progress_statistics
+from rdmo_plugins_statistics.config import CATEGORY_CHART_DEFINITION
 from rdmo_plugins_statistics.statistics import (
     fetch_statistics_for_sites,
 )
+
+
+def test_dashboard_summary_uses_existing_aggregates():
+    statistics = {
+        'projects': {
+            'total': 8,
+            'progress': [
+                {'percentage': 50, 'count': 3},
+                {'percentage': 100, 'count': 2},
+            ],
+        },
+        'users': {'total': 5},
+        'catalogs': {
+            'usage': [
+                {'project_count': 4},
+                {'project_count': 0},
+                {'project_count': 1},
+            ],
+        },
+    }
+
+    assert compute_dashboard_summary(statistics) == {
+        'projects': 8,
+        'users': 5,
+        'catalogs_in_use': 2,
+        'complete_projects': 2,
+    }
+
+    statistics['projects']['progress'] = [{'percentage': 50, 'count': 3}]
+    assert compute_dashboard_summary(statistics)['complete_projects'] == 0
+
+
+def test_project_progress_statistics_uses_the_configured_group_size():
+    statistics = [
+        {'percentage': 0, 'count': 1},
+        {'percentage': 4, 'count': 2},
+        {'percentage': 5, 'count': 3},
+        {'percentage': 99, 'count': 4},
+        {'percentage': 100, 'count': 5},
+    ]
+
+    rows = compute_project_progress_statistics(
+        statistics,
+        CATEGORY_CHART_DEFINITION['project_progress']['progress_group_size'],
+    )['rows']
+
+    assert len(rows) == 11
+    assert rows[0] == {'key': 0, 'label': '0-9%', 'value': 6}
+    assert rows[1] == {'key': 10, 'label': '10-19%', 'value': 0}
+    assert rows[9] == {'key': 90, 'label': '90-99%', 'value': 4}
+    assert rows[10] == {'key': 100, 'label': '100%', 'value': 5}
 
 
 @pytest.mark.django_db
@@ -51,12 +104,22 @@ def test_statistics_page_uses_current_site_data(client):
         progress_count=1,
         progress_total=2,
     )
-    Project.objects.create(
+    other_project = Project.objects.create(
         site=other_site,
         title='Private other project',
         progress_count=2,
         progress_total=2,
     )
+    catalog = Catalog.objects.create(
+        uri_prefix='https://example.org',
+        uri_path='summary-catalog',
+        title_lang1='Summary catalog',
+    )
+    catalog.sites.set([current_site, other_site])
+    project.catalog = catalog
+    project.save(update_fields=['catalog'])
+    other_project.catalog = catalog
+    other_project.save(update_fields=['catalog'])
     client.force_login(manager)
 
     response = client.get(reverse('statistics:index'))
@@ -64,31 +127,79 @@ def test_statistics_page_uses_current_site_data(client):
     assert response.status_code == 200
     project_chart = next(chart for chart in response.context['time_charts'] if chart['key'] == 'project')
     user_chart = next(chart for chart in response.context['time_charts'] if chart['key'] == 'user')
+    cumulative_users_chart = next(
+        chart for chart in response.context['time_charts'] if chart['key'] == 'cumulative-user'
+    )
     catalog_chart = next(chart for chart in response.context['category_charts'] if chart['key'] == 'catalog')
     progress_chart = next(chart for chart in response.context['category_charts'] if chart['key'] == 'project-progress')
     expected_date = timezone.localtime(project.created).date().isoformat()
 
     assert project_chart['total'] == 2
+    assert project_chart['title'] == 'Number of projects over time'
+    assert project_chart['x_axis_title'] == 'Date of creation'
+    assert user_chart['title'] == 'Number of registered users over time'
+    assert user_chart['x_axis_title'] == 'Date of registration'
+    assert cumulative_users_chart['x_axis_title'] == 'Date of registration'
+    assert response.context['summary'] == {
+        'projects': 2,
+        'users': 1,
+        'catalogs_in_use': 1,
+        'complete_projects': 0,
+    }
     assert project_chart['statistics']['day']['rows'] == [
         {'key': expected_date, 'label': expected_date, 'value': 2},
     ]
     assert user_chart['total'] == 1
     assert set(catalog_chart['statistics']) == {'rows'}
     assert catalog_chart['chart_type'] == 'bar'
-    assert progress_chart['statistics']['rows'] == [
-        {'key': 50, 'label': '50%', 'value': 2},
-    ]
-    assert progress_chart['chart_type'] == 'scatter'
-    assert 'orientation' not in progress_chart
-    assert b'data-chart-type="scatter"' in response.content
+    assert len(progress_chart['statistics']['rows']) == 11
+    assert progress_chart['statistics']['rows'][5] == {'key': 50, 'label': '50-59%', 'value': 2}
+    assert progress_chart['chart_type'] == 'bar'
+    assert progress_chart['orientation'] == 'vertical'
+    assert progress_chart['x_axis_title'] == 'Progress (%)'
+    assert progress_chart['y_axis_title'] == 'Number of projects'
+    assert b'data-chart-type="bar"' in response.content
+    assert b'data-chart-orientation="vertical"' in response.content
+    assert response.content.count(b'data-statistics-time-controls') == 1
+    assert response.content.count(b'class="statistics-data-table"') == 5
+    assert response.content.count(b'role="img"') == 5
+    assert response.content.count(b'class="statistics-interval"') == 1
+    assert b'<option value="month" selected>' in response.content
+    assert b'Displayed:' in response.content
+    assert b'Total:' in response.content
+    assert b'class="statistics-row-limit"' not in response.content
     assert 'Private current project' not in str(progress_chart)
 
 
 @pytest.mark.django_db
-@override_settings(RDMO_STATISTICS={'project_progress': {'chart_type': 'bar', 'orientation': 'vertical'}})
-def test_project_progress_can_be_rendered_as_bars(client):
+def test_catalog_chart_includes_all_catalogs_without_a_limit_control(client):
     current_site = Site.objects.get_current()
-    manager = get_user_model().objects.create_user(username='bar-progress-manager')
+    manager = get_user_model().objects.create_user(username='catalog-limit-manager')
+    manager.role.manager.add(current_site)
+
+    for index in range(26):
+        catalog = Catalog.objects.create(
+            uri_prefix='https://example.org',
+            uri_path=f'catalog-{index}',
+            title_lang1=f'Catalog {index}',
+        )
+        catalog.sites.add(current_site)
+
+    client.force_login(manager)
+    response = client.get(reverse('statistics:index'))
+    catalog_chart = next(chart for chart in response.context['category_charts'] if chart['key'] == 'catalog')
+
+    assert response.status_code == 200
+    assert len(catalog_chart['statistics']['rows']) == 26
+    assert b'class="statistics-row-limit"' not in response.content
+    assert b'data-row-limit=' not in response.content
+
+
+@pytest.mark.django_db
+@override_settings(RDMO_STATISTICS={'project_progress': {'orientation': 'horizontal'}})
+def test_project_progress_always_uses_vertical_axes(client):
+    current_site = Site.objects.get_current()
+    manager = get_user_model().objects.create_user(username='horizontal-progress-manager')
     manager.role.manager.add(current_site)
     Project.objects.create(site=current_site, title='Progress project', progress_count=1, progress_total=2)
     client.force_login(manager)
@@ -98,6 +209,8 @@ def test_project_progress_can_be_rendered_as_bars(client):
 
     assert progress_chart['chart_type'] == 'bar'
     assert progress_chart['orientation'] == 'vertical'
+    assert progress_chart['x_axis_title'] == 'Progress (%)'
+    assert progress_chart['y_axis_title'] == 'Number of projects'
     assert b'data-chart-type="bar"' in response.content
     assert b'data-chart-orientation="vertical"' in response.content
 

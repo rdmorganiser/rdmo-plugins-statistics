@@ -11,6 +11,32 @@
   font-weight: 600;
 }
 
+.statistics-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.statistics-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.statistics-summary-card span {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.statistics-summary-card strong {
+  font-size: 1.75rem;
+}
+
 .statistics-section {
   margin-bottom: 3rem;
 }
@@ -36,29 +62,49 @@
 
 .statistics-chart-controls {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
+.statistics-time-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.statistics-time-filters label,
 .statistics-chart-controls label {
   font-size: 0.9rem;
   font-weight: 600;
 }
 
+.statistics-time-filters select,
 .statistics-chart-controls select {
   min-width: 90px;
   padding: 0.3rem 0.6rem;
-
   border: 0;
   border-radius: 3px;
-
   background-color: #008f83;
   color: #fff;
-
   font: inherit;
   cursor: pointer;
+}
+
+.statistics-date-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: #b02a37;
+}
+
+.statistics-empty-message {
+  margin: 1rem 0 0;
+  color: #666;
+  text-align: center;
 }
 
 .statistics-chart-container {
@@ -85,7 +131,7 @@
 .statistics-chart-y-axis-title,
 .statistics-chart-x-axis-title {
   color: #666;
-  font-size: 0.75rem;
+  font-size: 1rem;
   text-align: center;
 }
 
@@ -111,6 +157,25 @@
 
 .project-statistics-total {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   white-space: nowrap;
+}
+
+.statistics-data-table {
+  margin-top: 1.5rem;
+}
+
+.statistics-data-table summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.statistics-table-viewport {
+  margin-top: 0.75rem;
+  overflow-x: auto;
+}
+
+.statistics-data-table table {
+  margin-bottom: 0;
 }
