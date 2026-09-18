@@ -10,8 +10,8 @@ The statistics page currently provides:
 - Number of newly registered users over time
 - Cumulative total users
 - Catalog usage by number of projects
-- Distribution of projects by five-point progress groups
-- Summary cards for projects, users, catalogs in use, and completed projects
+- Distribution of projects by ten-point progress groups
+- Summary cards for projects and users
 - Daily, monthly, quarterly, and yearly aggregation for the time-based charts
 - Shared start and end date filters for all time-based charts
 - Totals for the displayed time range and the system's overall total where applicable
@@ -163,7 +163,7 @@ Catalogs assigned to the current site are displayed together with the number of 
 
 ### Project progress
 
-The project-progress bar chart groups all projects belonging to the current site into fixed five-point ranges from 0–4% through 95–99%, with a separate 100% group. The percentage groups are shown on the x-axis and project counts on the y-axis. Projects whose interview has not started are included in the 0–4% group.
+The project-progress bar chart groups all projects belonging to the current site into fixed ten-point ranges from 0–9% through 90–99%, with a separate 100% group. The percentage groups are shown on the x-axis and project counts on the y-axis. Projects whose interview has not started are included in the 0–9% group.
 
 ## Frontend implementation
 
@@ -279,10 +279,11 @@ Remove the package:
 pip uninstall rdmo-plugins-statistics
 ```
 
-Then remove both plugin references from the RDMO configuration:
+Then remove all plugin references from the RDMO configuration:
 
 1. Remove `'rdmo_plugins_statistics'` from `INSTALLED_APPS`.
 2. Remove `path('statistics/', include('rdmo_plugins_statistics.urls'))` from `urlpatterns`.
-3. Remove the Statistics navigation entry from your theme override (`rdmo_theme/templates/core/base_navigation.html`).
+3. Remove `path('api/v1/', include('rdmo_plugins_statistics.urls.v1'))` from `urlpatterns`.
+4. Remove the Statistics navigation entry from your theme override (`rdmo_theme/templates/core/base_navigation.html`).
 
 All entries must be removed. Otherwise, Django will still try to import the uninstalled package and the application will not start.
