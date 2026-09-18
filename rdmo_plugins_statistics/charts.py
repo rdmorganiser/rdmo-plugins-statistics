@@ -7,7 +7,6 @@ TIME_CHART_CALCULATIONS = (
     'cumulative_count',
 )
 
-
 def get_chart_settings(name, available_settings, custom_settings):
     return {key: value for key, value in custom_settings.get(name, {}).items() if key in available_settings}
 
@@ -54,16 +53,43 @@ def compute_catalog_statistics(statistics):
     return {'rows': rows}
 
 
-def compute_project_progress_statistics(statistics):
+def compute_project_progress_statistics(statistics, group_size):
+    grouped_counts = dict.fromkeys((*range(0, 100, group_size), 100), 0)
+
+    for item in statistics:
+        percentage = item['percentage']
+        group = 100 if percentage == 100 else percentage // group_size * group_size
+        grouped_counts[group] += item['count']
+
     return {
         'rows': [
             {
-                'key': item['percentage'],
-                'label': f"{item['percentage']}%",
-                'value': item['count'],
+                'key': percentage,
+                'label': '100%' if percentage == 100 else f'{percentage}-{percentage + group_size - 1}%',
+                'value': grouped_counts[percentage],
             }
-            for item in statistics
+            for percentage in grouped_counts
         ],
+    }
+
+
+def compute_dashboard_summary(statistics):
+    projects = statistics['projects']
+
+    return {
+        'projects': projects['total'],
+        'users': statistics['users']['total'],
+        'catalogs_in_use': sum(
+            item['project_count'] > 0 for item in statistics['catalogs']['usage']
+        ),
+        'complete_projects': next(
+            (
+                item['count']
+                for item in projects['progress']
+                if item['percentage'] == 100
+            ),
+            0,
+        ),
     }
 
 
@@ -77,7 +103,7 @@ def compute_time_chart(name, definition, statistics, total, custom_settings):
 
 
 def compute_category_chart(name, definition, statistics, custom_settings):
-    chart_settings = get_chart_settings(name, CATEGORY_CHART_SETTINGS, custom_settings)
+    chart_settings = get_chart_settings(name, CATEGORY_CHART_SETTINGS[name], custom_settings)
 
     chart = {
         **definition,
@@ -85,7 +111,7 @@ def compute_category_chart(name, definition, statistics, custom_settings):
         'statistics': statistics,
     }
 
-    if chart['chart_type'] not in ('bar', 'scatter'):
+    if chart['chart_type'] != 'bar':
         raise ValueError(f"Unsupported category chart type: {chart['chart_type']}")
 
     opposite_orientation = {
@@ -107,6 +133,7 @@ def compute_dashboard_charts(statistics, custom_settings=None):
         custom_settings = getattr(settings, 'RDMO_STATISTICS', {})
     projects, users = statistics['projects'], statistics['users']
     return {
+        'summary': compute_dashboard_summary(statistics),
         'time_charts': [
             compute_time_chart(name, TIME_CHART_DEFINITION[name], rows, total, custom_settings)
             for name, rows, total in (
@@ -119,7 +146,13 @@ def compute_dashboard_charts(statistics, custom_settings=None):
             compute_category_chart(name, CATEGORY_CHART_DEFINITION[name], rows, custom_settings)
             for name, rows in (
                 ('catalogs', compute_catalog_statistics(statistics['catalogs']['usage'])),
-                ('project_progress', compute_project_progress_statistics(projects['progress'])),
+                (
+                    'project_progress',
+                    compute_project_progress_statistics(
+                        projects['progress'],
+                        CATEGORY_CHART_DEFINITION['project_progress']['progress_group_size'],
+                    ),
+                ),
             )
         ],
     }

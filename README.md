@@ -10,11 +10,14 @@ The statistics page currently provides:
 - Number of newly registered users over time
 - Cumulative total users
 - Catalog usage by number of projects
-- Distribution of projects by progress percentage
+- Distribution of projects by five-point progress groups
+- Summary cards for projects, users, catalogs in use, and completed projects
 - Daily, monthly, quarterly, and yearly aggregation for the time-based charts
-- Optional start and end date filters
+- Shared start and end date filters for all time-based charts
 - Totals for the displayed time range and the system's overall total where applicable
-- Persistent interval and date-filter selection for time-based charts using browser storage
+- Persistent and shareable interval and date-filter selection using browser storage and URL parameters
+- Accessible data tables, semantic tooltips, and explicit empty states for every chart
+- Complete catalog usage display
 - CSV export for every chart
 
 Access to the statistics page is restricted to site managers and controlled by the statistics.view_statistics permission.
@@ -72,12 +75,11 @@ and add the following where the navigation entry should appear:
 
 ```django
 {% has_perm 'statistics.view_statistics' request.user as can_view_statistics %}
+{% url 'statistics:index' as statistics_url %}
 
-{% if can_view_statistics %}
+{% if can_view_statistics and statistics_url %}
 <li>
-    <a href="{% url 'statistics:index' %}">
-        {% trans 'Statistics' %}
-    </a>
+    <a href="{{ statistics_url }}">{% trans 'Statistics' %}</a>
 </li>
 {% endif %}
 ```
@@ -114,21 +116,21 @@ RDMO_STATISTICS = {
     },
     'project_progress': {
         'chart_color': '#e6a15c',
-        'orientation': 'vertical',
+        'label_orientation': 'auto',
     },
 }
 ```
 
 The chart configuration can be overridden in `rdmo-app/config/settings/local.py` using the optional `RDMO_STATISTICS` setting. Only the values that should differ from the defaults need to be specified.
 
-The time-based charts and catalog usage are displayed as bar charts. Project progress is displayed as a scatter chart.
+All charts are displayed as bar charts. Project progress is always vertical.
 
 Currently, the following configuration options are supported:
 
 - `chart_color`
 - `empty_periods` (time-based charts): include periods without new records when set to `True`
 - `label_orientation`: `auto`, `horizontal` or `vertical` (only effective on vertical bar charts)
-- `orientation` (category charts): display charts `horizontal` or `vertical`
+- `orientation` (catalog usage only): display the chart `horizontal` or `vertical`
 
 ## Displayed Statistics
 
@@ -161,7 +163,7 @@ Catalogs assigned to the current site are displayed together with the number of 
 
 ### Project progress
 
-The project-progress scatter chart groups all projects belonging to the current site by their rounded progress percentage. It uses a fixed 0–100% percentage axis and shows the number of projects at each percentage. Projects whose interview has not started are included at 0%.
+The project-progress bar chart groups all projects belonging to the current site into fixed five-point ranges from 0–4% through 95–99%, with a separate 100% group. The percentage groups are shown on the x-axis and project counts on the y-axis. Projects whose interview has not started are included in the 0–4% group.
 
 ## Frontend implementation
 
@@ -205,12 +207,12 @@ The Django template serializes chart rows with Django's `json_script` filter. Th
 The frontend code:
 
 - Groups daily backend data into the selected interval
-- Filters time-based data by start and end date
+- Filters all time-based charts with one validated date range
 - Updates charts without reloading the page
-- Stores the selected interval and date filters in `localStorage`
+- Stores the selected interval and date filters in `localStorage` and the page URL
 - Draws values above vertical bars or beside horizontal bars
-- Sizes and scrolls category bar charts according to their orientation and number of entries
-- Exports the currently displayed chart data as CSV
+- Sizes and scrolls bar charts according to their orientation and number of entries
+- Uses the currently displayed rows for charts, HTML tables, totals, and CSV exports
 
 ## Migration from earlier versions
 

@@ -4,174 +4,209 @@
 
 {% block css %}
     {{ block.super }}
-    <link
-        rel="stylesheet"
-        href="{% static 'rdmo_plugins_statistics/css/statistics.css' %}"
-    >
+    <link rel="stylesheet" href="{% static 'rdmo_plugins_statistics/css/statistics.css' %}">
 {% endblock %}
 
 {% block content %}
-
 <div class="statistics-page">
-
     <h1>
         {% blocktranslate with site_name=current_site.name %}
             Statistics for {{ site_name }}
         {% endblocktranslate %}
     </h1>
 
+    <div class="statistics-summary" aria-label="{% translate 'Summary' %}">
+        <div class="statistics-summary-card">
+            <span>{% translate "Projects" %}</span>
+            <strong>{{ summary.projects }}</strong>
+        </div>
+        <div class="statistics-summary-card">
+            <span>{% translate "Users" %}</span>
+            <strong>{{ summary.users }}</strong>
+        </div>
+{#        <div class="statistics-summary-card">#}
+{#            <span>{% translate "Catalogs in use" %}</span>#}
+{#            <strong>{{ summary.catalogs_in_use }}</strong>#}
+{#        </div>#}
+{#        <div class="statistics-summary-card">#}
+{#            <span>{% translate "Complete projects" %}</span>#}
+{#            <strong>{{ summary.complete_projects }}</strong>#}
+{#        </div>#}
+    </div>
+
+    <div
+        class="statistics-chart-card statistics-time-filters"
+        data-statistics-time-controls
+        data-invalid-date-message="{% translate 'The start date must not be after the end date.' %}"
+    >
+        <label for="statistics-start">{% translate "From" %}</label>
+        <input type="date" id="statistics-start" class="statistics-start-date">
+
+        <label for="statistics-end">{% translate "To" %}</label>
+        <input type="date" id="statistics-end" class="statistics-end-date">
+
+        <label for="statistics-interval">{% translate "View by" %}</label>
+        <select id="statistics-interval" class="statistics-interval">
+            <option value="day">{% translate "Day" %}</option>
+            <option value="month" selected>{% translate "Month" %}</option>
+            <option value="quarter">{% translate "Quarter" %}</option>
+            <option value="year">{% translate "Year" %}</option>
+        </select>
+
+        <button type="button" class="btn btn-outline-secondary statistics-clear-dates">
+            {% translate "Reset" %}
+        </button>
+
+        <p class="statistics-date-error" role="alert" hidden></p>
+    </div>
+
     {% for chart in time_charts %}
-      {% with statistics_id=chart.key|add:"-statistics-data" storage_key=chart.key|add:"-statistics-interval" %}
+      {% with statistics_id=chart.key|add:"-statistics-data" table_id=chart.key|add:"-statistics-table" %}
         <section
             class="statistics-section"
             data-statistics-chart
             data-statistics-type="{{ chart.type }}"
             data-statistics-id="{{ statistics_id }}"
-            data-storage-key="{{ storage_key }}"
             data-dataset-label="{{ chart.dataset_label }}"
+            data-row-axis-title="{{ chart.x_axis_title }}"
             data-x-axis-title="{{ chart.x_axis_title }}"
             data-y-axis-title="{{ chart.y_axis_title }}"
             data-bar-color="{{ chart.chart_color }}"
             data-fill-gaps="{{ chart.empty_periods|yesno:'true,false' }}"
             data-label-orientation="{{ chart.label_orientation }}"
             data-calculation="{{ chart.calculation }}"
+            data-empty-message="{{ chart.empty_message }}"
         >
             <h2>{{ chart.title }}</h2>
 
             <div class="statistics-chart-card">
                 <div class="statistics-chart-controls">
-                    <button
-                        type="button"
-                        class="btn btn-outline-secondary statistics-export-csv"
-                    >
+                    <button type="button" class="btn btn-outline-secondary statistics-export-csv">
                         {% translate "Export CSV" %}
                     </button>
-
-                    <button
-                        type="button"
-                        class="btn btn-outline-secondary statistics-clear-dates"
-                    >
-                        {% translate "Clear dates" %}
-                    </button>
-
-                    <label for="{{ chart.key }}-statistics-start">
-                        {% translate "From" %}
-                    </label>
-
-                    <input
-                        type="date"
-                        id="{{ chart.key }}-statistics-start"
-                        class="statistics-start-date"
-                    >
-
-                    <label for="{{ chart.key }}-statistics-end">
-                        {% translate "To" %}
-                    </label>
-
-                    <input
-                        type="date"
-                        id="{{ chart.key }}-statistics-end"
-                        class="statistics-end-date"
-                    >
-
-                    <label for="{{ chart.key }}-statistics-interval">
-                        {% translate "View by" %}
-                    </label>
-
-                    <select
-                        id="{{ chart.key }}-statistics-interval"
-                        class="statistics-interval"
-                    >
-                        <option value="day">{% translate "Day" %}</option>
-                        <option value="month" selected>{% translate "Month" %}</option>
-                        <option value="quarter">{% translate "Quarter" %}</option>
-                        <option value="year">{% translate "Year" %}</option>
-                    </select>
 
                     <div class="project-statistics-total">
                     {% if chart.calculation != 'cumulative_count' %}
                         <span>
-                            <strong>{% translate "Total in displayed period" %}:</strong>
+                            <strong>{% translate "Displayed" %}:</strong>
                             <span class="statistics-total"></span>
                         </span>
                     {% endif %}
-
                         <span>
-                            <strong>{% translate "Total in system" %}:</strong>
+                            <strong>{% translate "Total" %}:</strong>
                             <span>{{ chart.total }}</span>
                         </span>
                     </div>
                 </div>
 
+                <p class="statistics-empty-message" role="status" hidden></p>
+
                 <div class="statistics-chart-layout">
-                    <div class="statistics-chart-y-axis-title">
-                        {{ chart.y_axis_title }}
-                    </div>
-
+                    <div class="statistics-chart-y-axis-title">{{ chart.y_axis_title }}</div>
                     <div class="statistics-chart-container">
-                        <canvas class="statistics-chart"></canvas>
+                        <canvas
+                            class="statistics-chart"
+                            role="img"
+                            aria-label="{{ chart.title }}"
+                            aria-describedby="{{ table_id }}"
+                        ></canvas>
                     </div>
-
-                    <div class="statistics-chart-x-axis-title">
-                        {{ chart.x_axis_title }}
-                    </div>
+                    <div class="statistics-chart-x-axis-title">{{ chart.x_axis_title }}</div>
                 </div>
+
+                <details class="statistics-data-table" id="{{ table_id }}">
+                    <summary>{% translate "Show data" %}</summary>
+                    <div class="statistics-table-viewport">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">{{ chart.x_axis_title }}</th>
+                                    <th scope="col">{{ chart.dataset_label }}</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </details>
             </div>
         </section>
       {% endwith %}
     {% endfor %}
 
     {% for chart in category_charts %}
-        {% with statistics_id=chart.key|add:"-statistics-data" %}
-            <section
-                class="statistics-section"
-                data-statistics-chart
-                data-statistics-type="{{ chart.type }}"
-                data-chart-type="{{ chart.chart_type }}"
-                data-statistics-id="{{ statistics_id }}"
-                data-dataset-label="{{ chart.dataset_label }}"
-                data-x-axis-title="{{ chart.x_axis_title }}"
-                data-y-axis-title="{{ chart.y_axis_title }}"
-                data-bar-color="{{ chart.chart_color }}"
-                data-label-orientation="{{ chart.label_orientation }}"
-                data-chart-orientation="{{ chart.orientation }}"
-            >
-                <h2>{{ chart.title }}</h2>
+      {% with statistics_id=chart.key|add:"-statistics-data" table_id=chart.key|add:"-statistics-table" %}
+        <section
+            class="statistics-section"
+            data-statistics-chart
+            data-statistics-type="{{ chart.type }}"
+            data-chart-type="{{ chart.chart_type }}"
+            data-statistics-id="{{ statistics_id }}"
+            data-dataset-label="{{ chart.dataset_label }}"
+            {% if chart.orientation == 'horizontal' %}
+                data-row-axis-title="{{ chart.y_axis_title }}"
+            {% else %}
+                data-row-axis-title="{{ chart.x_axis_title }}"
+            {% endif %}
+            data-x-axis-title="{{ chart.x_axis_title }}"
+            data-y-axis-title="{{ chart.y_axis_title }}"
+            data-bar-color="{{ chart.chart_color }}"
+            data-label-orientation="{{ chart.label_orientation }}"
+            data-chart-orientation="{{ chart.orientation }}"
+            data-empty-message="{{ chart.empty_message }}"
+        >
+            <h2>{{ chart.title }}</h2>
 
-                <div class="statistics-chart-card">
-                    <button
-                        type="button"
-                        class="btn btn-outline-secondary statistics-export-csv"
-                    >
+            <div class="statistics-chart-card">
+                <div class="statistics-chart-controls">
+                    <button type="button" class="btn btn-outline-secondary statistics-export-csv">
                         {% translate "Export CSV" %}
                     </button>
 
-                    <div class="statistics-chart-layout">
-                        <div class="statistics-chart-y-axis-title">
-                            {{ chart.y_axis_title }}
-                        </div>
+                </div>
 
-                        <div class="statistics-chart-viewport">
-                            <div class="statistics-chart-container">
-                                <canvas class="statistics-chart"></canvas>
-                            </div>
-                        </div>
+                <p class="statistics-empty-message" role="status" hidden></p>
 
-                        <div class="statistics-chart-x-axis-title">
-                            {{ chart.x_axis_title }}
+                <div class="statistics-chart-layout">
+                    <div class="statistics-chart-y-axis-title">{{ chart.y_axis_title }}</div>
+                    <div class="statistics-chart-viewport">
+                        <div class="statistics-chart-container">
+                            <canvas
+                                class="statistics-chart"
+                                role="img"
+                                aria-label="{{ chart.title }}"
+                                aria-describedby="{{ table_id }}"
+                            ></canvas>
                         </div>
                     </div>
-
-                    {% if chart.note %}
-                        <p class="statistics-chart-note">
-                            {{ chart.note }}
-                        </p>
-                    {% endif %}
+                    <div class="statistics-chart-x-axis-title">{{ chart.x_axis_title }}</div>
                 </div>
-            </section>
-        {% endwith %}
-    {% endfor %}
 
+                <details class="statistics-data-table" id="{{ table_id }}">
+                    <summary>{% translate "Show data" %}</summary>
+                    <div class="statistics-table-viewport">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    {% if chart.orientation == 'horizontal' %}
+                                        <th scope="col">{{ chart.y_axis_title }}</th>
+                                    {% else %}
+                                        <th scope="col">{{ chart.x_axis_title }}</th>
+                                    {% endif %}
+                                    <th scope="col">{{ chart.dataset_label }}</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </details>
+
+                {% if chart.note %}
+                    <p class="statistics-chart-note">{{ chart.note }}</p>
+                {% endif %}
+            </div>
+        </section>
+      {% endwith %}
+    {% endfor %}
 </div>
 
 {% for chart in time_charts %}
@@ -188,12 +223,6 @@
 
 {% block js %}
     {{ block.super }}
-    <script
-        defer
-        src="{% static 'rdmo_plugins_statistics/js/chart.umd.min.js' %}"
-    ></script>
-    <script
-        defer
-        src="{% static 'rdmo_plugins_statistics/js/statistics.js' %}"
-    ></script>
+    <script defer src="{% static 'rdmo_plugins_statistics/js/chart.umd.min.js' %}"></script>
+    <script defer src="{% static 'rdmo_plugins_statistics/js/statistics.js' %}"></script>
 {% endblock %}
