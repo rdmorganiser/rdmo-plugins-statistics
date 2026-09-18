@@ -1,5 +1,13 @@
 const CUMULATIVE_CALCULATION = 'cumulative_count'
 
+const TIME_INTERVALS = ['day', 'month', 'quarter', 'year']
+const DEFAULT_TIME_INTERVAL = 'month'
+const TIME_STORAGE_KEYS = {
+    interval: 'rdmo-statistics-interval',
+    start: 'rdmo-statistics-start',
+    end: 'rdmo-statistics-end'
+}
+
 const TIME_PERIOD_LIMITS = {
     day: 31,
     month: 24,
@@ -10,10 +18,10 @@ const TIME_PERIOD_LIMITS = {
 const CATEGORY_CHART_MIN_SIZE = 340
 const CATEGORY_CHART_AXIS_SIZE = 80
 const HORIZONTAL_CATEGORY_SIZE = 32
-const VERTICAL_CATEGORY_SIZE = 64
+const VERTICAL_CATEGORY_SIZE = 40
 
 const updateClearDatesButton = (button, filters) => {
-    button.disabled = !filters.start && !filters.end
+    button.disabled = !filters.start && !filters.end && filters.interval === DEFAULT_TIME_INTERVAL
 }
 
 const getDateDisplayLabel = (row, interval) => {
@@ -271,6 +279,16 @@ const statisticsTypes = {
     time: {
         getRows: getTimeChartRows,
 
+        hasData: (statistics, filters, container, rows) => {
+            if (container.dataset.calculation === CUMULATIVE_CALCULATION) {
+                return rows.some((row) => row.value > 0)
+            }
+
+            return statistics.day.rows.some((row) => (
+                isDateInRange(row.key.slice(0, 10), filters)
+            ))
+        },
+
         getDisplayLabel: (row, filters) => {
             return getDateDisplayLabel(row, filters.interval)
         },
@@ -283,9 +301,9 @@ const statisticsTypes = {
     },
 
     category: {
-        getRows: (statistics) => {
-            return [...statistics.rows].sort((a, b) => b.value - a.value)
-        },
+        getRows: (statistics) => [...statistics.rows],
+
+        hasData: (_statistics, _filters, _container, rows) => rows.some((row) => row.value > 0),
 
         getDisplayLabel: (row) => {
             return `${row.label}${row.label_suffix || ''}`
@@ -304,13 +322,16 @@ const prepareChartData = (statisticsType, statistics, filters, container) => {
     return {
         rows,
         displayLabels: rows.map((row) => statisticsType.getDisplayLabel(row, filters)),
-        tickRotation: getLabelTickRotation(container, defaultTickRotation)
+        tickRotation: getLabelTickRotation(container, defaultTickRotation),
+        hasData: statisticsType.hasData(statistics, filters, container, rows)
     }
 }
 
 const updateBarChart = (chart, preparedData) => {
     chart.data.labels = preparedData.displayLabels
     chart.data.datasets[0].data = preparedData.rows.map((row) => row.value)
+    chart.data.datasets[0].statisticsRows = preparedData.rows
+    chart.data.datasets[0].statisticsLabels = preparedData.displayLabels
     chart.options.scales.x.ticks.minRotation = preparedData.tickRotation.min
     chart.options.scales.x.ticks.maxRotation = preparedData.tickRotation.max
 
@@ -378,14 +399,37 @@ const drawValueLabelsPlugin = {
     }
 }
 
-const getChartDataset = (container, preparedData) => {
+const getBarChartDataset = (container, preparedData) => {
     return {
         label: container.dataset.datasetLabel,
         data: preparedData.rows.map((row) => row.value),
+        statisticsRows: preparedData.rows,
+        statisticsLabels: preparedData.displayLabels,
         backgroundColor: container.dataset.barColor,
         borderWidth: 0,
         barPercentage: 0.85,
         categoryPercentage: 0.85
+    }
+}
+
+const getTooltipCallbacks = (container) => {
+    return {
+        title(items) {
+            if (items.length === 0) {
+                return ''
+            }
+
+            const item = items[0]
+            const label = item.dataset.statisticsLabels[item.dataIndex]
+
+            return `${container.dataset.rowAxisTitle}: ${label}`
+        },
+
+        label(item) {
+            const row = item.dataset.statisticsRows[item.dataIndex]
+
+            return `${container.dataset.datasetLabel}: ${row.value}`
+        }
     }
 }
 
@@ -447,7 +491,8 @@ const getChartOptions = (container, preparedData, isHorizontal) => {
             },
 
             tooltip: {
-                displayColors: false
+                displayColors: false,
+                callbacks: getTooltipCallbacks(container)
             }
         },
 
@@ -464,7 +509,7 @@ const createBarChart = (chartElement, container, preparedData) => {
         data: {
             labels: preparedData.displayLabels,
             datasets: [
-                getChartDataset(container, preparedData)
+                getBarChartDataset(container, preparedData)
             ]
         },
 
@@ -476,87 +521,178 @@ const createBarChart = (chartElement, container, preparedData) => {
     })
 }
 
-const getTimeChartControls = (container) => {
+const createChart = createBarChart
+
+const isValidDateValue = (value) => {
+    if (!value) {
+        return false
+    }
+
+    const input = document.createElement('input')
+    input.type = 'date'
+    input.value = value
+
+    return input.value === value
+}
+
+const getInitialFilterValue = (parameters, name, storageKey, validate, fallback) => {
+    const parameter = parameters.get(name)
+
+    if (validate(parameter)) {
+        return parameter
+    }
+
+    const stored = localStorage.getItem(storageKey)
+
+    return validate(stored) ? stored : fallback
+}
+
+const clearLegacyTimeFilters = () => {
+    ['project', 'user', 'cumulative-user'].forEach((name) => {
+        const key = `${name}-statistics-interval`
+        localStorage.removeItem(key)
+        localStorage.removeItem(`${key}-start`)
+        localStorage.removeItem(`${key}-end`)
+    })
+}
+
+const createTimeFilterControls = () => {
+    const container = document.querySelector('[data-statistics-time-controls]')
+
+    if (!container) {
+        return null
+    }
+
     const intervalSelect = container.querySelector('.statistics-interval')
     const startDateInput = container.querySelector('.statistics-start-date')
     const endDateInput = container.querySelector('.statistics-end-date')
     const clearDatesButton = container.querySelector('.statistics-clear-dates')
-    const storageKey = container.dataset.storageKey
-    const storedInterval = localStorage.getItem(storageKey)
-    const storedStart = localStorage.getItem(`${storageKey}-start`)
-    const storedEnd = localStorage.getItem(`${storageKey}-end`)
-
-    if (storedInterval) {
-        intervalSelect.value = storedInterval
-    }
-
-    if (storedStart) {
-        startDateInput.value = storedStart
-    }
-
-    if (storedEnd) {
-        endDateInput.value = storedEnd
-    }
-
+    const errorElement = container.querySelector('.statistics-date-error')
+    const parameters = new URLSearchParams(window.location.search)
     const filters = {
-        interval: intervalSelect.value,
-        start: startDateInput.value,
-        end: endDateInput.value
+        interval: getInitialFilterValue(
+            parameters,
+            'interval',
+            TIME_STORAGE_KEYS.interval,
+            (value) => TIME_INTERVALS.includes(value),
+            DEFAULT_TIME_INTERVAL,
+        ),
+        start: getInitialFilterValue(
+            parameters,
+            'from',
+            TIME_STORAGE_KEYS.start,
+            isValidDateValue,
+            '',
+        ),
+        end: getInitialFilterValue(
+            parameters,
+            'to',
+            TIME_STORAGE_KEYS.end,
+            isValidDateValue,
+            '',
+        )
+    }
+    const listeners = []
+    let valid = true
+
+    intervalSelect.value = filters.interval
+    startDateInput.value = filters.start
+    endDateInput.value = filters.end
+
+    const updateValidity = () => {
+        startDateInput.max = filters.end
+        endDateInput.min = filters.start
+        valid = !(filters.start && filters.end && filters.start > filters.end)
+
+        startDateInput.setAttribute('aria-invalid', String(!valid))
+        endDateInput.setAttribute('aria-invalid', String(!valid))
+        errorElement.textContent = valid ? '' : container.dataset.invalidDateMessage
+        errorElement.hidden = valid
+
+        return valid
     }
 
-    updateClearDatesButton(clearDatesButton, filters)
+    const persist = () => {
+        localStorage.setItem(TIME_STORAGE_KEYS.interval, filters.interval)
 
-    return {
-        intervalSelect,
-        startDateInput,
-        endDateInput,
-        clearDatesButton,
-        storageKey,
-        filters
+        for (const name of ['start', 'end']) {
+            if (filters[name]) {
+                localStorage.setItem(TIME_STORAGE_KEYS[name], filters[name])
+            } else {
+                localStorage.removeItem(TIME_STORAGE_KEYS[name])
+            }
+        }
     }
-}
 
-const addTimeChartListeners = (controls, updateChart) => {
-    const {
-        intervalSelect,
-        startDateInput,
-        endDateInput,
-        clearDatesButton,
-        storageKey,
-        filters
-    } = controls
+    const updateUrl = () => {
+        const url = new URL(window.location.href)
+        url.searchParams.set('interval', filters.interval)
+
+        for (const [name, value] of [['from', filters.start], ['to', filters.end]]) {
+            if (value) {
+                url.searchParams.set(name, value)
+            } else {
+                url.searchParams.delete(name)
+            }
+        }
+
+        window.history.replaceState({}, '', url)
+    }
+
+    const notify = () => {
+        updateValidity()
+        updateClearDatesButton(clearDatesButton, filters)
+        persist()
+        updateUrl()
+        listeners.forEach((listener) => listener())
+    }
 
     intervalSelect.addEventListener('change', () => {
         filters.interval = intervalSelect.value
-        localStorage.setItem(storageKey, filters.interval)
-        updateChart()
+        notify()
     })
 
     startDateInput.addEventListener('change', () => {
         filters.start = startDateInput.value
-        localStorage.setItem(`${storageKey}-start`, filters.start)
-        updateClearDatesButton(clearDatesButton, filters)
-        updateChart()
+        notify()
     })
 
     endDateInput.addEventListener('change', () => {
         filters.end = endDateInput.value
-        localStorage.setItem(`${storageKey}-end`, filters.end)
-        updateClearDatesButton(clearDatesButton, filters)
-        updateChart()
+        notify()
     })
 
     clearDatesButton.addEventListener('click', () => {
+        intervalSelect.value = DEFAULT_TIME_INTERVAL
         startDateInput.value = ''
         endDateInput.value = ''
+        filters.interval = DEFAULT_TIME_INTERVAL
         filters.start = ''
         filters.end = ''
-
-        localStorage.removeItem(`${storageKey}-start`)
-        localStorage.removeItem(`${storageKey}-end`)
-        updateClearDatesButton(clearDatesButton, filters)
-        updateChart()
+        notify()
     })
+
+    updateValidity()
+    updateClearDatesButton(clearDatesButton, filters)
+    persist()
+    updateUrl()
+    clearLegacyTimeFilters()
+
+    return {
+        filters,
+        isValid: () => valid,
+        subscribe: (listener) => listeners.push(listener)
+    }
+}
+
+const escapeCsvCell = (value) => {
+    let text = String(value)
+
+    if (typeof value === 'string' && /^[=+\-@\t\r]/.test(text)) {
+        text = `'${text}`
+    }
+
+    return `"${text.replaceAll('"', '""')}"`
 }
 
 const downloadCsv = (container, filters, preparedData) => {
@@ -580,11 +716,7 @@ const downloadCsv = (container, filters, preparedData) => {
     ]
 
     const csv = csvRows
-        .map((row) => (
-            row
-                .map((value) => `"${String(value).replaceAll('"', '""')}"`)
-                .join(',')
-        ))
+        .map((row) => row.map(escapeCsvCell).join(','))
         .join('\n')
 
     const name = container.dataset.statisticsId
@@ -612,11 +744,32 @@ const downloadCsv = (container, filters, preparedData) => {
     URL.revokeObjectURL(url)
 }
 
-const createStatisticsChart = (container) => {
+const renderDataTable = (tableBody, preparedData) => {
+    const rows = preparedData.rows.map((row, index) => {
+        const tableRow = document.createElement('tr')
+        const labelCell = document.createElement('th')
+        const valueCell = document.createElement('td')
+
+        labelCell.scope = 'row'
+        labelCell.textContent = preparedData.displayLabels[index]
+        valueCell.textContent = row.value
+        tableRow.append(labelCell, valueCell)
+
+        return tableRow
+    })
+
+    tableBody.replaceChildren(...rows)
+}
+
+const createStatisticsChart = (container, timeControls) => {
     const statisticsElement = document.getElementById(container.dataset.statisticsId)
     const chartElement = container.querySelector('.statistics-chart')
+    const chartLayout = container.querySelector('.statistics-chart-layout')
     const totalElement = container.querySelector('.statistics-total')
     const exportButton = container.querySelector('.statistics-export-csv')
+    const emptyElement = container.querySelector('.statistics-empty-message')
+    const dataTable = container.querySelector('.statistics-data-table')
+    const tableBody = dataTable.querySelector('tbody')
     const statistics = JSON.parse(statisticsElement.textContent)
 
     const statisticsTypeName = container.dataset.statisticsType
@@ -627,11 +780,7 @@ const createStatisticsChart = (container) => {
         return
     }
 
-    const controls = statisticsTypeName === 'time'
-        ? getTimeChartControls(container)
-        : null
-
-    const filters = controls?.filters || {}
+    const filters = statisticsTypeName === 'time' ? timeControls.filters : {}
 
     const getPreparedData = () => {
         return prepareChartData(statisticsType, statistics, filters, container)
@@ -644,25 +793,49 @@ const createStatisticsChart = (container) => {
     }
 
     const initialData = getPreparedData()
+    const chart = createChart(chartElement, container, initialData)
 
-    updateTotal(totalElement, initialData.rows)
+    const render = () => {
+        const isInvalid = statisticsTypeName === 'time' && !timeControls.isValid()
 
-    if (statisticsTypeName === 'category') {
-        setCategoryChartSize(container, initialData.rows)
-    }
+        if (isInvalid) {
+            chartLayout.hidden = true
+            dataTable.hidden = true
+            emptyElement.hidden = true
+            exportButton.disabled = true
+            return
+        }
 
-    const chart = createBarChart(chartElement, container, initialData)
-
-    const updateChart = () => {
         const preparedData = getPreparedData()
 
-        updateBarChart(chart, preparedData)
+        chartLayout.hidden = !preparedData.hasData
+        dataTable.hidden = !preparedData.hasData
+        emptyElement.textContent = preparedData.hasData ? '' : container.dataset.emptyMessage
+        emptyElement.hidden = preparedData.hasData
+        exportButton.disabled = !preparedData.hasData
+
+        if (preparedData.hasData) {
+            updateBarChart(chart, preparedData)
+        }
+
         updateTotal(totalElement, preparedData.rows)
+        renderDataTable(tableBody, preparedData)
+
+        if (statisticsTypeName === 'category' && container.dataset.chartType === 'bar') {
+            setCategoryChartSize(container, preparedData.rows)
+        }
+
     }
 
-    if (controls) {
-        addTimeChartListeners(controls, updateChart)
+    if (statisticsTypeName === 'time') {
+        timeControls.subscribe(render)
     }
+
+    render()
 }
 
-document.querySelectorAll('[data-statistics-chart]').forEach(createStatisticsChart)
+const timeControls = createTimeFilterControls()
+
+document.querySelectorAll('[data-statistics-chart]').forEach((container) => {
+    createStatisticsChart(container, timeControls)
+})

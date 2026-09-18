@@ -1,58 +1,61 @@
 from django.utils.translation import gettext_lazy as _
 
-TIME_CHART_SETTINGS = {
-    'bar_color',
+TIME_CHART_SETTINGS = (
+    'chart_color',
     'empty_periods',
     'label_orientation',
-}
+)
 
 CATEGORY_CHART_SETTINGS = {
-    'bar_color',
-    'label_orientation',
-    'orientation',
+    'catalogs': (
+        'chart_color',
+        'label_orientation',
+        'orientation',
+    ),
+    'project_progress': (
+        'chart_color',
+        'label_orientation',
+    ),
 }
 
 TIME_CHART_DEFINITION = {
     'projects': {
         'key': 'project',
         'type': 'time',
-        'query_key': 'project',
-        'date_field': 'created',
         'calculation': 'period_count',
-        'bar_color': '#7eafe0',
+        'chart_color': '#7eafe0',
         'dataset_label': _('Number of projects'),
         'empty_periods': True,
+        'empty_message': _('No projects were found for this period.'),
         'label_orientation': 'auto',
-        'title': _('Number of projects'),
-        'x_axis_title': _('Created'),
+        'title': _('Number of projects over time'),
+        'x_axis_title': _('Date of creation'),
         'y_axis_title': _('Number of projects'),
     },
     'users': {
         'key': 'user',
         'type': 'time',
-        'query_key': 'user',
-        'date_field': 'date_joined',
         'calculation': 'period_count',
-        'bar_color': '#65c5c4',
+        'chart_color': '#65c5c4',
         'dataset_label': _('Number of registered users'),
         'empty_periods': True,
+        'empty_message': _('No user registrations were found for this period.'),
         'label_orientation': 'auto',
-        'title': _('Number of registered users'),
-        'x_axis_title': _('Registered'),
+        'title': _('Number of registered users over time'),
+        'x_axis_title': _('Date of registration'),
         'y_axis_title': _('Number of registered users'),
     },
     'cumulative_users': {
         'key': 'cumulative-user',
         'type': 'time',
-        'query_key': 'user',
-        'date_field': 'date_joined',
         'calculation': 'cumulative_count',
-        'bar_color': '#65c5c4',
+        'chart_color': '#65c5c4',
         'dataset_label': _('Number of users'),
         'empty_periods': True,
+        'empty_message': _('No user data is available for this period.'),
         'label_orientation': 'auto',
         'title': _('Total users'),
-        'x_axis_title': _('Date'),
+        'x_axis_title': _('Date of registration'),
         'y_axis_title': _('Number of users'),
     },
 }
@@ -61,10 +64,11 @@ CATEGORY_CHART_DEFINITION = {
     'catalogs': {
         'key': 'catalog',
         'type': 'category',
-        'query_key': 'catalog',
-        'bar_color': '#a8d37d',
+        'chart_type': 'bar',
+        'chart_color': '#a8d37d',
         'dataset_label': _('Number of projects'),
-        'label_orientation': 'horizontal',
+        'empty_message': _('No catalog usage data is available.'),
+        'label_orientation': 'auto',
         'note': _('* unavailable'),
         'orientation': 'horizontal',
         'title': _('Catalog usage'),
@@ -74,13 +78,15 @@ CATEGORY_CHART_DEFINITION = {
     'project_progress': {
         'key': 'project-progress',
         'type': 'category',
-        'query_key': 'project-progress',
-        'bar_color': '#e6a15c',
-        'dataset_label': _('Progress (%)'),
-        'label_orientation': 'horizontal',
-        'orientation': 'horizontal',
+        'chart_type': 'bar',
+        'chart_color': '#e6a15c',
+        'dataset_label': _('Number of projects'),
+        'empty_message': _('No project progress data is available.'),
+        'label_orientation': 'auto',
+        'orientation': 'vertical',
+        'progress_group_size': 10,
         'title': _('Project progress'),
         'x_axis_title': _('Progress (%)'),
-        'y_axis_title': _('Project'),
+        'y_axis_title': _('Number of projects'),
     },
 }
