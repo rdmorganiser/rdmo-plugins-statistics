@@ -135,7 +135,9 @@ def test_statistics_page_uses_current_site_data(client):
     expected_date = timezone.localtime(project.created).date().isoformat()
 
     assert project_chart['total'] == 2
+    assert project_chart['title'] == 'Number of projects over time'
     assert project_chart['x_axis_title'] == 'Date of creation'
+    assert user_chart['title'] == 'Number of registered users over time'
     assert user_chart['x_axis_title'] == 'Date of registration'
     assert cumulative_users_chart['x_axis_title'] == 'Date of registration'
     assert response.context['summary'] == {

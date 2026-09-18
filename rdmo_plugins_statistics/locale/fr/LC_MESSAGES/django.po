@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-18 10:21+0200\n"
+"POT-Creation-Date: 2026-09-18 10:55+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,10 +18,9 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: rdmo_plugins_statistics/config.py:27 rdmo_plugins_statistics/config.py:31
-#: rdmo_plugins_statistics/config.py:33 rdmo_plugins_statistics/config.py:69
-#: rdmo_plugins_statistics/config.py:75 rdmo_plugins_statistics/config.py:83
-#: rdmo_plugins_statistics/config.py:89
+#: rdmo_plugins_statistics/config.py:27 rdmo_plugins_statistics/config.py:33
+#: rdmo_plugins_statistics/config.py:69 rdmo_plugins_statistics/config.py:75
+#: rdmo_plugins_statistics/config.py:83 rdmo_plugins_statistics/config.py:90
 msgid "Number of projects"
 msgstr "Nombre de projets"
 
@@ -29,18 +28,27 @@ msgstr "Nombre de projets"
 msgid "No projects were found for this period."
 msgstr "Aucun projet n’a été trouvé pour cette période."
 
+#: rdmo_plugins_statistics/config.py:31
+#| msgid "Number of projects"
+msgid "Number of projects over time"
+msgstr "Nombre de projets au fil du temps"
+
 #: rdmo_plugins_statistics/config.py:32
 msgid "Date of creation"
 msgstr "Date de création"
 
-#: rdmo_plugins_statistics/config.py:40 rdmo_plugins_statistics/config.py:44
-#: rdmo_plugins_statistics/config.py:46
+#: rdmo_plugins_statistics/config.py:40 rdmo_plugins_statistics/config.py:46
 msgid "Number of registered users"
 msgstr "Nombre d'utilisateurs enregistrés"
 
 #: rdmo_plugins_statistics/config.py:42
 msgid "No user registrations were found for this period."
 msgstr "Aucune inscription d’utilisateur n’a été trouvée pour cette période."
+
+#: rdmo_plugins_statistics/config.py:44
+#| msgid "Number of registered users"
+msgid "Number of registered users over time"
+msgstr "Nombre d'utilisateurs enregistrés au fil du temps"
 
 #: rdmo_plugins_statistics/config.py:45 rdmo_plugins_statistics/config.py:58
 msgid "Date of registration"
@@ -82,11 +90,11 @@ msgstr "Catalogue"
 msgid "No project progress data is available."
 msgstr "Aucune donnée d’avancement des projets n’est disponible."
 
-#: rdmo_plugins_statistics/config.py:87
+#: rdmo_plugins_statistics/config.py:88
 msgid "Project progress"
 msgstr ""
 
-#: rdmo_plugins_statistics/config.py:88
+#: rdmo_plugins_statistics/config.py:89
 msgid "Progress (%)"
 msgstr ""
 
@@ -203,8 +211,3 @@ msgstr "Afficher les données"
 #, python-format
 #~ msgid "Showing at most the %(limit)s most recently created projects."
 #~ msgstr "Affichage des %(limit)s projets créés les plus récents au maximum."
-
-#, fuzzy
-#~| msgid "Number of projects"
-#~ msgid "Number of users over time"
-#~ msgstr "Nombre de projets"
