@@ -11,6 +11,7 @@ const source = readFileSync(path.join(__dirname,
 const element = (classes = []) => {
     const names = new Set(classes)
     return {
+        className: classes.join(' '),
         dataset: {}, attributes: {}, listeners: {}, children: {}, value: '',
         classList: {
             add: (name) => names.add(name),
@@ -28,6 +29,10 @@ const load = (bootstrap5) => {
     const button = element(['btn', 'btn-default'])
     const select = element(['form-control'])
     const toggle = element(['btn-link'])
+    const projectIcon = element(['statistics-summary-icon', 'fa', 'fa-folder'])
+    projectIcon.dataset.icon = 'folder'
+    const userIcon = element(['statistics-summary-icon', 'fa', 'fa-users'])
+    userIcon.dataset.icon = 'people'
     const context = vm.createContext({
         console, URL, URLSearchParams, Blob,
         getComputedStyle: () => ({ getPropertyValue: () => bootstrap5 ? ' system-ui ' : '' }),
@@ -38,12 +43,13 @@ const load = (bootstrap5) => {
                 '.statistics-page .btn-default': [button],
                 '.statistics-interval': [select],
                 '.statistics-mode-toggle': [toggle],
+                '.statistics-summary-icon': [projectIcon, userIcon],
             }[selector] || []),
             createElement: () => element(),
         },
     })
     vm.runInContext(source, context)
-    return { context, button, select, toggle,
+    return { context, button, select, toggle, projectIcon, userIcon,
         ...vm.runInContext('({ applyTimeChartMode, createTimeFilterControls, downloadCsv, downloadChartImage })', context) }
 }
 
@@ -72,10 +78,16 @@ const modes = ['new', 'total'].map((key) => ({
 
 for (const bootstrap5 of [false, true]) {
     test(`Bootstrap ${bootstrap5 ? 5 : 3}: native controls and independent accessible toggles`, () => {
-        const { button, select, toggle, applyTimeChartMode } = load(bootstrap5)
+        const { button, select, toggle, projectIcon, userIcon, applyTimeChartMode } = load(bootstrap5)
         assert.ok(button.classList.contains(bootstrap5 ? 'btn-outline-secondary' : 'btn-default'))
         assert.ok(select.classList.contains(bootstrap5 ? 'form-select' : 'form-control'))
         assert.equal(toggle.classList.contains('link'), bootstrap5)
+        assert.equal(projectIcon.className, bootstrap5
+            ? 'statistics-summary-icon bi bi-folder'
+            : 'statistics-summary-icon fa fa-folder')
+        assert.equal(userIcon.className, bootstrap5
+            ? 'statistics-summary-icon bi bi-people'
+            : 'statistics-summary-icon fa fa-users')
         const projects = chart()
         const users = chart()
         const projectToggle = projects.querySelector('.statistics-mode-toggle')

@@ -180,6 +180,12 @@ def test_statistics_page_uses_current_site_data(client):
     assert response.content.count(b'data-statistics-time-controls') == 1
     assert response.content.count(b'class="statistics-data-table"') == 4
     assert response.content.count(b'role="img"') == 4
+    assert response.content.count(
+        b'class="statistics-summary-icon fa fa-folder" data-icon="folder" aria-hidden="true"'
+    ) == 1
+    assert response.content.count(
+        b'class="statistics-summary-icon fa fa-users" data-icon="people" aria-hidden="true"'
+    ) == 1
     assert response.content.count(b'class="btn-link statistics-mode-toggle"') == 2
     assert response.content.count(b'aria-pressed="false"') == 2
     assert b'aria-label="Cumulative projects"' in response.content

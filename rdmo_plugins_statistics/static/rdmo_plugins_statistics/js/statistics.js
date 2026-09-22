@@ -802,6 +802,9 @@ const styleStatisticsControls = () => {
         document.querySelectorAll('.statistics-mode-toggle').forEach((button) => {
             button.classList.add('link')
         })
+        document.querySelectorAll('.statistics-summary-icon').forEach((icon) => {
+            icon.className = `statistics-summary-icon bi bi-${icon.dataset.icon}`
+        })
     }
 
     return bootstrap5 ? 'bi' : 'fa'

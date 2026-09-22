@@ -17,12 +17,18 @@
 
     <div class="statistics-summary" aria-label="{% translate 'Summary' %}">
         <div class="statistics-summary-card">
-            <span>{% translate "Projects" %}</span>
-            <strong>{{ summary.projects }}</strong>
+            <span class="statistics-summary-icon fa fa-folder" data-icon="folder" aria-hidden="true"></span>
+            <span class="statistics-summary-content">
+                <span>{% translate "Projects" %}</span>
+                <strong>{{ summary.projects }}</strong>
+            </span>
         </div>
         <div class="statistics-summary-card">
-            <span>{% translate "Users" %}</span>
-            <strong>{{ summary.users }}</strong>
+            <span class="statistics-summary-icon fa fa-users" data-icon="people" aria-hidden="true"></span>
+            <span class="statistics-summary-content">
+                <span>{% translate "Users" %}</span>
+                <strong>{{ summary.users }}</strong>
+            </span>
         </div>
 {#        <div class="statistics-summary-card">#}
 {#            <span>{% translate "Catalogs in use" %}</span>#}

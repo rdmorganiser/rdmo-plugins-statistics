@@ -20,21 +20,45 @@
 
 .statistics-summary-card {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 1rem 1.25rem;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1.25rem;
   border: 1px solid #ddd;
+  border-radius: 0.5rem;
   background-color: #fff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
-.statistics-summary-card span {
-  color: #666;
-  font-size: 0.9rem;
+.statistics-summary-icon {
+  display: inline-flex;
+  flex: 0 0 3.5em;
+  align-items: center;
+  justify-content: center;
+  width: 3.5em;
+  height: 3.5em;
+  border-radius: 1.25em;
+  background-color: #eef4ff;
+  color: var(--rdmo-link-color, #337ab7);
+  font-size: 1.75rem;
+  line-height: 1;
 }
 
-.statistics-summary-card strong {
-  font-size: 1.75rem;
+.statistics-summary-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.15em;
+}
+
+.statistics-summary-content > span {
+  color: #666;
+  font-size: 1.1em;
+}
+
+.statistics-summary-content > strong {
+  font-size: 2.5em;
+  line-height: 1;
 }
 
 .statistics-section {
@@ -173,7 +197,7 @@
 .statistics-chart-y-axis-title,
 .statistics-chart-x-axis-title {
   color: #666;
-  font-size: 1rem;
+  font-size: 1.5rem;
   text-align: center;
 }
 
