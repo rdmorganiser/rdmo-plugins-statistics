@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-21 22:15+0200\n"
+"POT-Creation-Date: 2026-09-22 13:37+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -194,12 +194,16 @@ msgstr "Anno"
 msgid "Reset"
 msgstr "Reimposta"
 
-#: templates/rdmo_plugins_statistics/statistics.html:105
+#: templates/rdmo_plugins_statistics/statistics.html:106
 #: templates/rdmo_plugins_statistics/statistics.html:184
 msgid "Export CSV"
 msgstr "Esporta CSV"
 
-#: templates/rdmo_plugins_statistics/statistics.html:112
+#: templates/rdmo_plugins_statistics/statistics.html:109
+#: templates/rdmo_plugins_statistics/statistics.html:187
+msgid "Download PNG"
+msgstr "Scarica PNG"
+
 #: templates/rdmo_plugins_statistics/statistics.html:114
 msgid "Displayed"
 msgstr "Visualizzato"
@@ -209,7 +213,7 @@ msgid "Current total"
 msgstr "Totale attuale"
 
 #: templates/rdmo_plugins_statistics/statistics.html:140
-#: templates/rdmo_plugins_statistics/statistics.html:207
+#: templates/rdmo_plugins_statistics/statistics.html:210
 msgid "Show data"
 msgstr "Mostra dati"
 

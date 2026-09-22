@@ -73,6 +73,7 @@
             data-statistics-chart
             data-statistics-type="{{ chart.type }}"
             data-statistics-id="{{ statistics_id }}"
+            data-site-name="{{ current_site.name }}"
             data-chart-title="{{ chart.title }}"
             data-dataset-label="{{ default_mode.dataset_label }}"
             data-row-axis-title="{{ chart.x_axis_title }}"
@@ -104,6 +105,14 @@
 
                     <button type="button" class="btn btn-default statistics-export-csv">
                         {% translate "Export CSV" %}
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-default statistics-export-image"
+                        title="{% translate 'Download PNG' %}"
+                        aria-label="{% translate 'Download PNG' %}"
+                    >
+                        {% translate "Download PNG" %}
                     </button>
 
                     <div class="project-statistics-total">
@@ -160,6 +169,7 @@
             data-statistics-type="{{ chart.type }}"
             data-chart-type="{{ chart.chart_type }}"
             data-statistics-id="{{ statistics_id }}"
+            data-site-name="{{ current_site.name }}"
             data-dataset-label="{{ chart.dataset_label }}"
             {% if chart.orientation == 'horizontal' %}
                 data-row-axis-title="{{ chart.y_axis_title }}"
@@ -179,6 +189,14 @@
                 <div class="statistics-chart-controls">
                     <button type="button" class="btn btn-default statistics-export-csv">
                         {% translate "Export CSV" %}
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-default statistics-export-image"
+                        title="{% translate 'Download PNG' %}"
+                        aria-label="{% translate 'Download PNG' %}"
+                    >
+                        {% translate "Download PNG" %}
                     </button>
 
                 </div>

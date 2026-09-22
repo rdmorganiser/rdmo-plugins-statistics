@@ -698,6 +698,32 @@ const escapeCsvCell = (value) => {
     return `"${text.replaceAll('"', '""')}"`
 }
 
+const sanitizeFilenamePart = (value) => {
+    return String(value || '')
+        .trim()
+        .replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/g, '-')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'site'
+}
+
+const getChartExportFilename = (container, filters, extension) => {
+    const siteName = sanitizeFilenamePart(container.dataset.siteName)
+    const name = container.dataset.statisticsId
+        .replace('-statistics-data', '')
+    const mode = container.dataset.exportKey
+        ? `-${container.dataset.exportKey}`
+        : ''
+
+    const range = filters.start || filters.end
+        ? `${filters.start || 'start'}-${filters.end || 'end'}`
+        : 'all'
+
+    return filters.interval
+        ? `${siteName}-statistics-${name}${mode}-${filters.interval}-${range}.${extension}`
+        : `${siteName}-statistics-${name}.${extension}`
+}
+
 const downloadCsv = (container, filters, preparedData) => {
     const isHorizontal = container.dataset.chartOrientation === 'horizontal'
 
@@ -722,20 +748,6 @@ const downloadCsv = (container, filters, preparedData) => {
         .map((row) => row.map(escapeCsvCell).join(','))
         .join('\n')
 
-    const name = container.dataset.statisticsId
-        .replace('-statistics-data', '')
-    const mode = container.dataset.exportKey
-        ? `-${container.dataset.exportKey}`
-        : ''
-
-    const range = filters.start || filters.end
-        ? `${filters.start || 'start'}-${filters.end || 'end'}`
-        : 'all'
-
-    const filename = filters.interval
-        ? `statistics-${name}${mode}-${filters.interval}-${range}.csv`
-        : `statistics-${name}.csv`
-
     const blob = new Blob([csv], {
         type: 'text/csv;charset=utf-8'
     })
@@ -744,10 +756,18 @@ const downloadCsv = (container, filters, preparedData) => {
     const link = document.createElement('a')
 
     link.href = url
-    link.download = filename
+    link.download = getChartExportFilename(container, filters, 'csv')
     link.click()
 
     URL.revokeObjectURL(url)
+}
+
+const downloadChartImage = (container, filters, chart) => {
+    const link = document.createElement('a')
+
+    link.href = chart.toBase64Image('image/png')
+    link.download = getChartExportFilename(container, filters, 'png')
+    link.click()
 }
 
 const renderDataTable = (tableBody, preparedData) => {
@@ -819,6 +839,7 @@ const createStatisticsChart = (container, timeControls) => {
     const chartLayout = container.querySelector('.statistics-chart-layout')
     const totalElement = container.querySelector('.statistics-total')
     const exportButton = container.querySelector('.statistics-export-csv')
+    const imageExportButton = container.querySelector('.statistics-export-image')
     const emptyElement = container.querySelector('.statistics-empty-message')
     const dataTable = container.querySelector('.statistics-data-table')
     const tableBody = dataTable.querySelector('tbody')
@@ -856,6 +877,12 @@ const createStatisticsChart = (container, timeControls) => {
     const initialData = getPreparedData()
     const chart = createChart(chartElement, container, initialData)
 
+    if (imageExportButton) {
+        imageExportButton.addEventListener('click', () => {
+            downloadChartImage(container, filters, chart)
+        })
+    }
+
     const render = () => {
         const isInvalid = statisticsTypeName === 'time' && !timeControls.isValid()
 
@@ -864,6 +891,7 @@ const createStatisticsChart = (container, timeControls) => {
             dataTable.hidden = true
             emptyElement.hidden = true
             exportButton.disabled = true
+            imageExportButton.disabled = true
             return
         }
 
@@ -874,6 +902,7 @@ const createStatisticsChart = (container, timeControls) => {
         emptyElement.textContent = preparedData.hasData ? '' : container.dataset.emptyMessage
         emptyElement.hidden = preparedData.hasData
         exportButton.disabled = !preparedData.hasData
+        imageExportButton.disabled = !preparedData.hasData
 
         if (preparedData.hasData) {
             updateBarChart(chart, preparedData)

@@ -19,6 +19,7 @@ The statistics page currently provides:
 - Accessible data tables, semantic tooltips, and explicit empty states for every chart
 - Complete catalog usage display
 - CSV export for every chart
+- PNG image download for every chart
 
 Access to the statistics page is restricted to site managers and controlled by the statistics.view_statistics permission.
 
@@ -136,6 +137,8 @@ By default, the time-based charts display a shortened time range to improve read
 Each time chart has an independent toggle: off shows new records per period, on shows cumulative totals. Both mode labels remain visible beside the icon, with the active mode highlighted. Both charts start in New mode on every page load. Reset clears the dates and restores the monthly interval without changing either chart's mode.
 
 Chart controls use the loaded RDMO styling: Bootstrap 3 with Font Awesome toggles, or Bootstrap 5 with Bootstrap Icons toggles. No additional icon library is bundled.
+
+CSV and PNG downloads are prefixed with a sanitized version of the current site name so files from multiple RDMO sites remain identifiable.
 
 ### Projects over time
 

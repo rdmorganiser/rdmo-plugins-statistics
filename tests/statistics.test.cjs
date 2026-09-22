@@ -44,7 +44,7 @@ const load = (bootstrap5) => {
     })
     vm.runInContext(source, context)
     return { context, button, select, toggle,
-        ...vm.runInContext('({ applyTimeChartMode, createTimeFilterControls, downloadCsv })', context) }
+        ...vm.runInContext('({ applyTimeChartMode, createTimeFilterControls, downloadCsv, downloadChartImage })', context) }
 }
 
 const chart = () => {
@@ -159,11 +159,44 @@ test('CSV headers and filenames follow the selected chart mode', async () => {
     context.document.createElement = () => link
     const projects = chart()
     projects.dataset.statisticsId = 'project-statistics-data'
+    projects.dataset.siteName = 'Example Site'
     projects.dataset.xAxisTitle = 'Date of creation'
     for (const [index, mode] of modes.entries()) {
         applyTimeChartMode(projects, mode, modes[1 - index])
         downloadCsv(projects, { interval: 'month' }, { displayLabels: ['Jan 2026'], rows: [{ value: 2 }] })
-        assert.equal(link.download, `statistics-project-${mode.export_key}-month-all.csv`)
+        assert.equal(link.download, `Example-Site-statistics-project-${mode.export_key}-month-all.csv`)
         assert.equal(await blob.text(), `"Date of creation","${mode.dataset_label}"\n"Jan 2026","2"`)
     }
+})
+
+test('PNG downloads use the active mode and chart filters', () => {
+    const { context, applyTimeChartMode, downloadChartImage } = load(false)
+    const link = { click() {} }
+    context.document.createElement = () => link
+    const projects = chart()
+    projects.dataset.statisticsId = 'project-statistics-data'
+    projects.dataset.siteName = 'Example Site'
+    applyTimeChartMode(projects, modes[1], modes[0])
+
+    let requestedType
+    downloadChartImage(projects, {
+        interval: 'month',
+        start: '2026-01-01',
+        end: '2026-03-31',
+    }, {
+        toBase64Image: (type) => {
+            requestedType = type
+            return 'data:image/png;base64,chart'
+        },
+    })
+
+    assert.equal(requestedType, 'image/png')
+    assert.equal(link.href, 'data:image/png;base64,chart')
+    assert.equal(link.download, 'Example-Site-statistics-project-total-month-2026-01-01-2026-03-31.png')
+
+    projects.dataset.siteName = 'Example / RDMO'
+    downloadChartImage(projects, {}, {
+        toBase64Image: () => 'data:image/png;base64,chart',
+    })
+    assert.equal(link.download, 'Example-RDMO-statistics-project.png')
 })

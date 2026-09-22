@@ -189,11 +189,14 @@ def test_statistics_page_uses_current_site_data(client):
     assert response.content.count(b'class="statistics-mode-icon fa fa-toggle-off" aria-hidden="true"') == 2
     assert response.content.count(b'class="statistics-mode-option statistics-mode-option-new"') == 2
     assert response.content.count(b'class="statistics-mode-option statistics-mode-option-total"') == 2
+    assert response.content.count(b'data-site-name="') == 4
     assert b'type="radio"' not in response.content
     assert response.content.count(b'class="form-control statistics-interval"') == 1
     assert b'class="form-control statistics-start-date"' in response.content
     assert b'class="form-control statistics-end-date"' in response.content
     assert response.content.count(b'class="btn btn-default statistics-export-csv"') == 4
+    assert response.content.count(b'class="btn btn-default statistics-export-image"') == 4
+    assert response.content.count(b'aria-label="Download PNG"') == 4
     assert b'<option value="month" selected>' in response.content
     assert b'At end' not in response.content
     assert response.content.count(b'>Displayed</strong>') == 2
