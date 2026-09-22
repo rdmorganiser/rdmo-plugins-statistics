@@ -39,21 +39,27 @@
         data-statistics-time-controls
         data-invalid-date-message="{% translate 'The start date must not be after the end date.' %}"
     >
-        <label for="statistics-start">{% translate "From" %}</label>
-        <input type="date" id="statistics-start" class="statistics-start-date">
+        <div class="statistics-filter-field">
+            <label for="statistics-start">{% translate "From" %}</label>
+            <input type="date" id="statistics-start" class="form-control statistics-start-date">
+        </div>
 
-        <label for="statistics-end">{% translate "To" %}</label>
-        <input type="date" id="statistics-end" class="statistics-end-date">
+        <div class="statistics-filter-field">
+            <label for="statistics-end">{% translate "To" %}</label>
+            <input type="date" id="statistics-end" class="form-control statistics-end-date">
+        </div>
 
-        <label for="statistics-interval">{% translate "View by" %}</label>
-        <select id="statistics-interval" class="statistics-interval">
-            <option value="day">{% translate "Day" %}</option>
-            <option value="month" selected>{% translate "Month" %}</option>
-            <option value="quarter">{% translate "Quarter" %}</option>
-            <option value="year">{% translate "Year" %}</option>
-        </select>
+        <div class="statistics-filter-field">
+            <label for="statistics-interval">{% translate "View by" %}</label>
+            <select id="statistics-interval" class="form-control statistics-interval">
+                <option value="day">{% translate "Day" %}</option>
+                <option value="month" selected>{% translate "Month" %}</option>
+                <option value="quarter">{% translate "Quarter" %}</option>
+                <option value="year">{% translate "Year" %}</option>
+            </select>
+        </div>
 
-        <button type="button" class="btn btn-outline-secondary statistics-clear-dates">
+        <button type="button" class="btn btn-default statistics-clear-dates">
             {% translate "Reset" %}
         </button>
 
@@ -61,39 +67,52 @@
     </div>
 
     {% for chart in time_charts %}
-      {% with statistics_id=chart.key|add:"-statistics-data" table_id=chart.key|add:"-statistics-table" %}
+      {% with statistics_id=chart.key|add:"-statistics-data" table_id=chart.key|add:"-statistics-table" default_mode=chart.modes.0 %}
         <section
             class="statistics-section"
             data-statistics-chart
             data-statistics-type="{{ chart.type }}"
             data-statistics-id="{{ statistics_id }}"
-            data-dataset-label="{{ chart.dataset_label }}"
+            data-chart-title="{{ chart.title }}"
+            data-dataset-label="{{ default_mode.dataset_label }}"
             data-row-axis-title="{{ chart.x_axis_title }}"
             data-x-axis-title="{{ chart.x_axis_title }}"
-            data-y-axis-title="{{ chart.y_axis_title }}"
+            data-y-axis-title="{{ default_mode.y_axis_title }}"
             data-bar-color="{{ chart.chart_color }}"
             data-fill-gaps="{{ chart.empty_periods|yesno:'true,false' }}"
             data-label-orientation="{{ chart.label_orientation }}"
-            data-calculation="{{ chart.calculation }}"
-            data-empty-message="{{ chart.empty_message }}"
+            data-calculation="{{ default_mode.calculation }}"
+            data-empty-message="{{ default_mode.empty_message }}"
+            data-export-key="{{ default_mode.export_key }}"
         >
             <h2>{{ chart.title }}</h2>
 
             <div class="statistics-chart-card">
                 <div class="statistics-chart-controls">
-                    <button type="button" class="btn btn-outline-secondary statistics-export-csv">
+                    <button
+                        type="button"
+                        class="btn-link statistics-mode-toggle"
+                        aria-label="{{ chart.toggle_label }}"
+                        aria-pressed="false"
+                        title="{{ chart.modes.1.action_label }}"
+                        data-modes-id="{{ chart.key }}-statistics-modes"
+                    >
+                        <span class="statistics-mode-option statistics-mode-option-new">{{ chart.modes.0.label }}</span>
+                        <span class="statistics-mode-icon fa fa-toggle-off" aria-hidden="true"></span>
+                        <span class="statistics-mode-option statistics-mode-option-total">{{ chart.modes.1.label }}</span>
+                    </button>
+
+                    <button type="button" class="btn btn-default statistics-export-csv">
                         {% translate "Export CSV" %}
                     </button>
 
                     <div class="project-statistics-total">
-                    {% if chart.calculation != 'cumulative_count' %}
-                        <span>
-                            <strong>{% translate "Displayed" %}:</strong>
+                        <span class="statistics-range-total">
+                            <strong class="statistics-range-total-label">{% translate "Displayed" %}</strong>:
                             <span class="statistics-total"></span>
                         </span>
-                    {% endif %}
                         <span>
-                            <strong>{% translate "Total" %}:</strong>
+                            <strong>{% translate "Current total" %}:</strong>
                             <span>{{ chart.total }}</span>
                         </span>
                     </div>
@@ -102,12 +121,12 @@
                 <p class="statistics-empty-message" role="status" hidden></p>
 
                 <div class="statistics-chart-layout">
-                    <div class="statistics-chart-y-axis-title">{{ chart.y_axis_title }}</div>
+                    <div class="statistics-chart-y-axis-title">{{ default_mode.y_axis_title }}</div>
                     <div class="statistics-chart-container">
                         <canvas
                             class="statistics-chart"
                             role="img"
-                            aria-label="{{ chart.title }}"
+                            aria-label="{{ chart.title }}: {{ default_mode.label }}"
                             aria-describedby="{{ table_id }}"
                         ></canvas>
                     </div>
@@ -121,7 +140,7 @@
                             <thead>
                                 <tr>
                                     <th scope="col">{{ chart.x_axis_title }}</th>
-                                    <th scope="col">{{ chart.dataset_label }}</th>
+                                    <th scope="col" class="statistics-value-heading">{{ default_mode.dataset_label }}</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -158,7 +177,7 @@
 
             <div class="statistics-chart-card">
                 <div class="statistics-chart-controls">
-                    <button type="button" class="btn btn-outline-secondary statistics-export-csv">
+                    <button type="button" class="btn btn-default statistics-export-csv">
                         {% translate "Export CSV" %}
                     </button>
 
@@ -210,6 +229,9 @@
 </div>
 
 {% for chart in time_charts %}
+    {% with modes_id=chart.key|add:"-statistics-modes" %}
+        {{ chart.modes|json_script:modes_id }}
+    {% endwith %}
     {% with statistics_id=chart.key|add:"-statistics-data" %}
         {{ chart.statistics|json_script:statistics_id }}
     {% endwith %}

@@ -11,30 +11,17 @@ def get_chart_settings(name, available_settings, custom_settings):
     return {key: value for key, value in custom_settings.get(name, {}).items() if key in available_settings}
 
 
-def compute_time_statistics(statistics, calculation):
-    if calculation not in TIME_CHART_CALCULATIONS:
-        raise ValueError(f'Unsupported time chart calculation: {calculation}')
-
-    total = 0
-    rows = []
-
-    for item in statistics:
-        period, count = item['date'], item['count']
-        if calculation == 'cumulative_count':
-            total += count
-            value = total
-        else:
-            value = count
-
-        rows.append({
-            'key': period,
-            'label': period,
-            'value': value,
-        })
-
+def compute_time_statistics(statistics):
     return {
         'day': {
-            'rows': rows,
+            'rows': [
+                {
+                    'key': item['date'],
+                    'label': item['date'],
+                    'value': item['count'],
+                }
+                for item in statistics
+            ],
         },
     }
 
@@ -94,10 +81,22 @@ def compute_dashboard_summary(statistics):
 
 
 def compute_time_chart(name, definition, statistics, total, custom_settings):
+    chart_settings = {}
+    if name == 'users':
+        chart_settings.update(get_chart_settings('cumulative_users', TIME_CHART_SETTINGS, custom_settings))
+    chart_settings.update(get_chart_settings(name, TIME_CHART_SETTINGS, custom_settings))
+
+    for mode in definition['modes']:
+        if mode['calculation'] not in TIME_CHART_CALCULATIONS:
+            raise ValueError(f"Unsupported time chart calculation: {mode['calculation']}")
+
     return {
         **definition,
-        **get_chart_settings(name, TIME_CHART_SETTINGS, custom_settings),
-        'statistics': compute_time_statistics(statistics, definition['calculation']),
+        **chart_settings,
+        'statistics': {
+            mode['calculation']: compute_time_statistics(statistics[mode['source']])
+            for mode in definition['modes']
+        },
         'total': total,
     }
 
@@ -137,9 +136,8 @@ def compute_dashboard_charts(statistics, custom_settings=None):
         'time_charts': [
             compute_time_chart(name, TIME_CHART_DEFINITION[name], rows, total, custom_settings)
             for name, rows, total in (
-                ('projects', projects['created'], projects['total']),
-                ('users', users['registered'], users['total']),
-                ('cumulative_users', users['registered'], users['total']),
+                ('projects', projects, projects['total']),
+                ('users', users, users['total']),
             )
         ],
         'category_charts': [

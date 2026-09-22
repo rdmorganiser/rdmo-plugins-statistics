@@ -6,9 +6,9 @@ The RDMO Statistics Plugin adds a statistics page to RDMO and displays project, 
 
 The statistics page currently provides:
 
-- Number of projects over time
-- Number of newly registered users over time
-- Cumulative total users
+- New and cumulative project counts over time
+- New and cumulative user counts over time
+- RDMO-style icon toggles between new and total counts, with visible mode labels
 - Catalog usage by number of projects
 - Distribution of projects by ten-point progress groups
 - Summary cards for projects and users
@@ -104,11 +104,6 @@ RDMO_STATISTICS = {
         'empty_periods': True,
         'label_orientation': 'auto',
     },
-    'cumulative_users': {
-        'chart_color': '#65c5c4',
-        'empty_periods': True,
-        'label_orientation': 'auto',
-    },
     'catalogs': {
         'chart_color': '#a8d37d',
         'label_orientation': 'auto',
@@ -123,6 +118,8 @@ RDMO_STATISTICS = {
 
 The chart configuration can be overridden in `rdmo-app/config/settings/local.py` using the optional `RDMO_STATISTICS` setting. Only the values that should differ from the defaults need to be specified.
 
+The former `cumulative_users` settings key is deprecated. For compatibility, its values are used as fallbacks for missing `users` settings; explicit `users` settings take precedence. Both user-chart modes use the resulting unified settings.
+
 All charts are displayed as bar charts. Project progress is always vertical.
 
 Currently, the following configuration options are supported:
@@ -136,9 +133,13 @@ Currently, the following configuration options are supported:
 
 By default, the time-based charts display a shortened time range to improve readability. Users can expand or further restrict the displayed data using the From and To date filters.
 
-### Number of projects
+Each time chart has an independent toggle: off shows new records per period, on shows cumulative totals. Both mode labels remain visible beside the icon, with the active mode highlighted. Both charts start in New mode on every page load. Reset clears the dates and restores the monthly interval without changing either chart's mode.
 
-Projects belonging to the current site are grouped by their creation date.
+Chart controls use the loaded RDMO styling: Bootstrap 3 with Font Awesome toggles, or Bootstrap 5 with Bootstrap Icons toggles. No additional icon library is bundled.
+
+### Projects over time
+
+Projects belonging to the current site are grouped by their creation date. The chart can toggle between projects created in each period and the cumulative total at the end of each period.
 
 The chart can display the data by:
 
@@ -147,15 +148,11 @@ The chart can display the data by:
 - Quarter
 - Year
 
-The user can restrict the displayed data with From and To date fields. The total for the displayed period is recalculated whenever the interval or date range changes.
+The user can restrict the displayed data with From and To date fields. New-project mode shows the total created during the displayed period; total-project mode includes projects created before the start date in its cumulative values.
 
-### Number of registered users
+### Users over time
 
-New users belonging to the current site are grouped by their registration date and can be filtered and aggregated in the same way as projects. This chart shows how many users registered during each displayed period.
-
-### Total users
-
-The chart shows the total number of users belonging to the current site over time.
+New users belonging to the current site are grouped by their registration date and can be filtered and aggregated in the same way as projects. The chart can toggle between users registered in each period and the cumulative total at the end of each period.
 
 ### Catalog usage
 
@@ -167,7 +164,7 @@ The project-progress bar chart groups all projects belonging to the current site
 
 ## Frontend implementation
 
-Site-scoped queries and domain aggregates live in `rdmo_plugins_statistics.statistics`. The JSON API and server exports use these aggregates directly. The Django view passes them to `compute_dashboard_charts` in `rdmo_plugins_statistics.charts`, which adds chart settings, labels, and cumulative display values.
+Site-scoped queries and domain aggregates live in `rdmo_plugins_statistics.statistics`. The JSON API and server exports use these aggregates directly. The Django view passes them to `compute_dashboard_charts` in `rdmo_plugins_statistics.charts`, which adds chart settings, labels, and mode-specific display payloads.
 
 Statistics can also be fetched separately in Python:
 
@@ -188,7 +185,7 @@ statistics = fetch_statistics(site)
 site_statistics = fetch_statistics_for_sites(sites)
 ```
 
-Single-site functions return domain aggregates. Projects expose `total`, `created` rows (`date`, `count`), and `progress` rows (`percentage`, `count`). Users expose `total` and `registered` rows (`date`, `count`). Catalogs expose `usage` rows (`id`, `uri`, `title`, `available`, `project_count`).
+Single-site functions return domain aggregates. Projects expose `total`, `created` rows (`date`, `count`), cumulative `total_over_time` rows (`date`, `count`), and `progress` rows (`percentage`, `count`). Users expose `total`, `registered` rows (`date`, `count`), and cumulative `total_over_time` rows (`date`, `count`). Catalogs expose `usage` rows (`id`, `uri`, `title`, `available`, `project_count`).
 
 `fetch_statistics(site)` combines these under `projects`, `users`, and `catalogs`. `fetch_statistics_for_sites(sites)` accepts an iterable or queryset of sites and returns ordered per-site results with a `site` dictionary containing `id`, `name`, and `domain`. Chart settings are accepted only by the chart adapter, not by fetchers.
 
@@ -208,6 +205,7 @@ The frontend code:
 
 - Groups daily backend data into the selected interval
 - Filters all time-based charts with one validated date range
+- Toggles project and user charts between new and cumulative totals
 - Updates charts without reloading the page
 - Stores the selected interval and date filters in `localStorage` and the page URL
 - Draws values above vertical bars or beside horizontal bars
@@ -243,13 +241,15 @@ With no site option, only the current site is exported. Explicit site IDs are va
 |---|---|
 | `site_totals.csv` | `project_count,user_count` |
 | `project_creation.csv` | `date,project_count` |
+| `project_totals_over_time.csv` | `date,project_count` |
 | `user_registration.csv` | `date,user_count` |
+| `user_totals_over_time.csv` | `date,user_count` |
 | `project_progress.csv` | `percentage,project_count` |
 | `catalog_usage.csv` | `catalog_id,catalog_uri,catalog_title,available,project_count` |
 
 Empty tables retain their headers. Spreadsheet formula prefixes in text are escaped with a leading apostrophe; numeric values are not escaped. Catalog IDs and site IDs identify records within this RDMO database; cross-installation imports need a source identifier supplied by the pipeline.
 
-Each run replaces these five files with the latest state and leaves unrelated files alone. All files are prepared before replacement, but replacement is atomic only per file, not for the whole batch. Upload only after the command exits successfully, and avoid overlapping exports to the same directory. Fetches are sequential and are not a transactionally consistent snapshot during concurrent database updates.
+Each run replaces these seven files with the latest state and leaves unrelated files alone. All files are prepared before replacement, but replacement is atomic only per file, not for the whole batch. Upload only after the command exits successfully, and avoid overlapping exports to the same directory. Fetches are sequential and are not a transactionally consistent snapshot during concurrent database updates.
 
 Example daily cron entry (adjust paths and supply your normal Django settings environment):
 
@@ -257,7 +257,7 @@ Example daily cron entry (adjust paths and supply your normal Django settings en
 0 2 * * * cd /srv/rdmo && .venv/bin/python manage.py export_statistics --all-sites --output-dir /srv/rdmo/statistics
 ```
 
-These exports describe current records and site assignments. Creation/registration series exclude deleted records, and progress and catalog usage describe the current state. They do not reconstruct historical snapshots. CI upload and Metabase ingestion are managed outside this plugin.
+These exports describe current records and site assignments. Creation, registration, and cumulative series exclude deleted records; progress and catalog usage describe the current state. The cumulative files are derived from currently existing records and do not reconstruct immutable historical snapshots. CI upload and Metabase ingestion are managed outside this plugin.
 
 ## Development
 

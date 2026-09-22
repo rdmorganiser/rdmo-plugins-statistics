@@ -251,7 +251,7 @@ const carryCumulativeValues = (rows) => {
 const getTimeChartRows = (statistics, filters, container) => {
     const calculationName = container.dataset.calculation
     const calculation = timeCalculations[calculationName]
-    const sourceRows = statistics.day.rows
+    const sourceRows = statistics[calculationName].day.rows
     let rows = groupTimeRows(sourceRows, filters, calculation)
 
     if (container.dataset.fillGaps === 'true') {
@@ -284,7 +284,7 @@ const statisticsTypes = {
                 return rows.some((row) => row.value > 0)
             }
 
-            return statistics.day.rows.some((row) => (
+            return statistics[container.dataset.calculation].day.rows.some((row) => (
                 isDateInRange(row.key.slice(0, 10), filters)
             ))
         },
@@ -329,6 +329,7 @@ const prepareChartData = (statisticsType, statistics, filters, container) => {
 
 const updateBarChart = (chart, preparedData) => {
     chart.data.labels = preparedData.displayLabels
+    chart.data.datasets[0].label = chart.canvas.closest('[data-statistics-chart]').dataset.datasetLabel
     chart.data.datasets[0].data = preparedData.rows.map((row) => row.value)
     chart.data.datasets[0].statisticsRows = preparedData.rows
     chart.data.datasets[0].statisticsLabels = preparedData.displayLabels
@@ -338,9 +339,11 @@ const updateBarChart = (chart, preparedData) => {
     chart.update()
 }
 
-const updateTotal = (element, rows) => {
+const updateTotal = (element, rows, calculationName) => {
     if (element) {
-        element.textContent = rows.reduce((sum, row) => sum + row.value, 0)
+        element.textContent = calculationName === CUMULATIVE_CALCULATION
+            ? rows.at(-1)?.value || 0
+            : rows.reduce((sum, row) => sum + row.value, 0)
     }
 }
 
@@ -721,13 +724,16 @@ const downloadCsv = (container, filters, preparedData) => {
 
     const name = container.dataset.statisticsId
         .replace('-statistics-data', '')
+    const mode = container.dataset.exportKey
+        ? `-${container.dataset.exportKey}`
+        : ''
 
     const range = filters.start || filters.end
         ? `${filters.start || 'start'}-${filters.end || 'end'}`
         : 'all'
 
     const filename = filters.interval
-        ? `statistics-${name}-${filters.interval}-${range}.csv`
+        ? `statistics-${name}${mode}-${filters.interval}-${range}.csv`
         : `statistics-${name}.csv`
 
     const blob = new Blob([csv], {
@@ -761,6 +767,52 @@ const renderDataTable = (tableBody, preparedData) => {
     tableBody.replaceChildren(...rows)
 }
 
+const styleStatisticsControls = () => {
+    // Detect the loaded CSS, since both RDMO generations use core/base.html.
+    const bootstrap5 = Boolean(getComputedStyle(document.documentElement)
+        .getPropertyValue('--bs-body-font-family').trim())
+
+    if (bootstrap5) {
+        document.querySelectorAll('.statistics-page .btn-default').forEach((button) => {
+            button.classList.replace('btn-default', 'btn-outline-secondary')
+        })
+        document.querySelectorAll('.statistics-interval').forEach((select) => {
+            select.classList.replace('form-control', 'form-select')
+        })
+        document.querySelectorAll('.statistics-mode-toggle').forEach((button) => {
+            button.classList.add('link')
+        })
+    }
+
+    return bootstrap5 ? 'bi' : 'fa'
+}
+
+const applyTimeChartMode = (container, mode, nextMode) => {
+    const cumulative = mode.calculation === CUMULATIVE_CALCULATION
+    const button = container.querySelector('.statistics-mode-toggle')
+    button.setAttribute('aria-pressed', String(cumulative))
+    button.title = nextMode.action_label
+    button.classList.remove('is-cumulative')
+    if (cumulative) {
+        button.classList.add('is-cumulative')
+    }
+    button.querySelector('.statistics-mode-icon').className =
+        `statistics-mode-icon ${toggleIconPrefix} ${toggleIconPrefix}-toggle-${cumulative ? 'on' : 'off'}`
+
+    container.dataset.calculation = mode.calculation
+    container.dataset.datasetLabel = mode.dataset_label
+    container.dataset.yAxisTitle = mode.y_axis_title
+    container.dataset.emptyMessage = mode.empty_message
+    container.dataset.exportKey = mode.export_key
+
+    container.querySelector('.statistics-chart-y-axis-title').textContent = mode.y_axis_title
+    container.querySelector('.statistics-value-heading').textContent = mode.dataset_label
+    container.querySelector('.statistics-chart').setAttribute(
+        'aria-label',
+        `${container.dataset.chartTitle}: ${mode.label}`,
+    )
+}
+
 const createStatisticsChart = (container, timeControls) => {
     const statisticsElement = document.getElementById(container.dataset.statisticsId)
     const chartElement = container.querySelector('.statistics-chart')
@@ -771,6 +823,11 @@ const createStatisticsChart = (container, timeControls) => {
     const dataTable = container.querySelector('.statistics-data-table')
     const tableBody = dataTable.querySelector('tbody')
     const statistics = JSON.parse(statisticsElement.textContent)
+    const modeButton = container.querySelector('.statistics-mode-toggle')
+    const modes = modeButton
+        ? JSON.parse(document.getElementById(modeButton.dataset.modesId).textContent)
+        : []
+    let modeIndex = 0
 
     const statisticsTypeName = container.dataset.statisticsType
     const statisticsType = statisticsTypes[statisticsTypeName]
@@ -781,6 +838,10 @@ const createStatisticsChart = (container, timeControls) => {
     }
 
     const filters = statisticsTypeName === 'time' ? timeControls.filters : {}
+
+    if (statisticsTypeName === 'time') {
+        applyTimeChartMode(container, modes[0], modes[1])
+    }
 
     const getPreparedData = () => {
         return prepareChartData(statisticsType, statistics, filters, container)
@@ -818,7 +879,7 @@ const createStatisticsChart = (container, timeControls) => {
             updateBarChart(chart, preparedData)
         }
 
-        updateTotal(totalElement, preparedData.rows)
+        updateTotal(totalElement, preparedData.rows, container.dataset.calculation)
         renderDataTable(tableBody, preparedData)
 
         if (statisticsTypeName === 'category' && container.dataset.chartType === 'bar') {
@@ -829,11 +890,17 @@ const createStatisticsChart = (container, timeControls) => {
 
     if (statisticsTypeName === 'time') {
         timeControls.subscribe(render)
+        modeButton.addEventListener('click', () => {
+            modeIndex = 1 - modeIndex
+            applyTimeChartMode(container, modes[modeIndex], modes[1 - modeIndex])
+            render()
+        })
     }
 
     render()
 }
 
+const toggleIconPrefix = styleStatisticsControls()
 const timeControls = createTimeFilterControls()
 
 document.querySelectorAll('[data-statistics-chart]').forEach((container) => {

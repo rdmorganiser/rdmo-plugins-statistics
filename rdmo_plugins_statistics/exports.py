@@ -5,7 +5,9 @@ from tempfile import TemporaryDirectory
 CSV_COLUMNS = {
     'site_totals': ('project_count', 'user_count'),
     'project_creation': ('date', 'project_count'),
+    'project_totals_over_time': ('date', 'project_count'),
     'user_registration': ('date', 'user_count'),
+    'user_totals_over_time': ('date', 'user_count'),
     'project_progress': ('percentage', 'project_count'),
     'catalog_usage': ('catalog_id', 'catalog_uri', 'catalog_title', 'available', 'project_count'),
 }
@@ -19,7 +21,7 @@ def escape_csv_cell(value):
 
 
 def export_statistics_csv(statistics, output_dir):
-    """Replace the five latest-state tables from already fetched per-site aggregates."""
+    """Replace the seven latest-state tables from already fetched per-site aggregates."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(prefix='.statistics-', dir=output_dir) as staging:
@@ -34,8 +36,12 @@ def export_statistics_csv(statistics, output_dir):
                         rows = [(entry['projects']['total'], entry['users']['total'])]
                     elif table == 'project_creation':
                         rows = ((row['date'], row['count']) for row in entry['projects']['created'])
+                    elif table == 'project_totals_over_time':
+                        rows = ((row['date'], row['count']) for row in entry['projects']['total_over_time'])
                     elif table == 'user_registration':
                         rows = ((row['date'], row['count']) for row in entry['users']['registered'])
+                    elif table == 'user_totals_over_time':
+                        rows = ((row['date'], row['count']) for row in entry['users']['total_over_time'])
                     elif table == 'project_progress':
                         rows = ((row['percentage'], row['count']) for row in entry['projects']['progress'])
                     else:

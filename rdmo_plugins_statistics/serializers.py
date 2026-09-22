@@ -4,12 +4,14 @@ from rest_framework import serializers
 class ProjectStatisticsSerializer(serializers.Serializer):
     total = serializers.IntegerField()
     created = serializers.ListField(child=serializers.DictField())
+    total_over_time = serializers.ListField(child=serializers.DictField())
     progress = serializers.ListField(child=serializers.DictField())
 
 
 class UserStatisticsSerializer(serializers.Serializer):
     total = serializers.IntegerField()
     registered = serializers.ListField(child=serializers.DictField())
+    total_over_time = serializers.ListField(child=serializers.DictField())
 
 
 class CatalogStatisticsSerializer(serializers.Serializer):

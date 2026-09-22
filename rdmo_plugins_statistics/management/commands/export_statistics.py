@@ -8,7 +8,7 @@ from rdmo_plugins_statistics.statistics import fetch_statistics_for_sites
 
 
 class Command(BaseCommand):
-    help = 'Export the latest per-site statistics into five CSV tables.'
+    help = 'Export the latest per-site statistics into seven CSV tables.'
 
     def add_arguments(self, parser):
         selection = parser.add_mutually_exclusive_group()

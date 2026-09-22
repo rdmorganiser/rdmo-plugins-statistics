@@ -19,6 +19,17 @@ def annotate_and_fetch_date_counts(queryset, date_field, *, distinct=False):
     ]
 
 
+def compute_cumulative_date_counts(rows):
+    total = 0
+    cumulative_rows = []
+
+    for row in rows:
+        total += row['count']
+        cumulative_rows.append({'date': row['date'], 'count': total})
+
+    return cumulative_rows
+
+
 def fetch_project_statistics(site):
     projects = Project.objects.filter(site=site)
     created = annotate_and_fetch_date_counts(projects, 'created')
@@ -33,6 +44,7 @@ def fetch_project_statistics(site):
     return {
         'total': sum(row['count'] for row in created),
         'created': created,
+        'total_over_time': compute_cumulative_date_counts(created),
         'progress': [
             {'percentage': percentage, 'count': progress[percentage]}
             for percentage in sorted(progress)
@@ -45,7 +57,8 @@ def fetch_user_statistics(site):
     date_joined = annotate_and_fetch_date_counts(users, 'date_joined', distinct=True)
     return {
         'total': sum(row['count'] for row in date_joined),
-        'registered': date_joined
+        'registered': date_joined,
+        'total_over_time': compute_cumulative_date_counts(date_joined),
     }
 
 
