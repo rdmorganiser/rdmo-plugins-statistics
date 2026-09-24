@@ -29,8 +29,8 @@ const load = (bootstrap5) => {
     const button = element(['btn', 'btn-default'])
     const select = element(['form-control'])
     const toggle = element(['btn-link'])
-    const projectIcon = element(['statistics-summary-icon', 'fa', 'fa-folder'])
-    projectIcon.dataset.icon = 'folder'
+    const projectIcon = element(['statistics-summary-icon', 'fa', 'fa-folder-o'])
+    projectIcon.dataset.icon = 'folder2'
     const userIcon = element(['statistics-summary-icon', 'fa', 'fa-users'])
     userIcon.dataset.icon = 'people'
     const context = vm.createContext({
@@ -83,8 +83,8 @@ for (const bootstrap5 of [false, true]) {
         assert.ok(select.classList.contains(bootstrap5 ? 'form-select' : 'form-control'))
         assert.equal(toggle.classList.contains('link'), bootstrap5)
         assert.equal(projectIcon.className, bootstrap5
-            ? 'statistics-summary-icon bi bi-folder'
-            : 'statistics-summary-icon fa fa-folder')
+            ? 'statistics-summary-icon bi bi-folder2'
+            : 'statistics-summary-icon fa fa-folder-o')
         assert.equal(userIcon.className, bootstrap5
             ? 'statistics-summary-icon bi bi-people'
             : 'statistics-summary-icon fa fa-users')

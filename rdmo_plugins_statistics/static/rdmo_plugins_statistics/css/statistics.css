@@ -21,7 +21,7 @@
 .statistics-summary-card {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.25rem;
   min-width: 0;
   padding: 1.25rem;
   border: 1px solid #ddd;
@@ -32,15 +32,15 @@
 
 .statistics-summary-icon {
   display: inline-flex;
-  flex: 0 0 3.5em;
+  flex: 0 0 4rem;
   align-items: center;
   justify-content: center;
-  width: 3.5em;
-  height: 3.5em;
-  border-radius: 1.25em;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1.25rem;
   background-color: #eef4ff;
   color: var(--rdmo-link-color, #337ab7);
-  font-size: 1.75rem;
+  font-size: 2rem;
   line-height: 1;
 }
 
@@ -48,16 +48,16 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 0.15em;
+  gap: 0.25rem;
 }
 
 .statistics-summary-content > span {
-  color: #666;
-  font-size: 1.1em;
+  color: #46556a;
+  font-size: 1.1rem;
 }
 
 .statistics-summary-content > strong {
-  font-size: 2.5em;
+  font-size: 2.5rem;
   line-height: 1;
 }
 
