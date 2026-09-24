@@ -1,24 +1,18 @@
 from django.utils.translation import gettext_lazy as _
 
-TIME_CHART_SETTINGS = (
+TIME_CHART_SETTINGS = (  # the settings that can be changed in local.py
     'chart_color',
     'empty_periods',
     'label_orientation',
 )
 
-CATEGORY_CHART_SETTINGS = {
-    'catalogs': (
-        'chart_color',
-        'label_orientation',
-        'orientation',
-    ),
-    'project_progress': (
-        'chart_color',
-        'label_orientation',
-    ),
-}
+CATEGORY_CHART_SETTINGS = (  # the settings that can be changed in local.py
+    'chart_color',
+    'label_orientation',
+    'orientation',
+)
 
-TIME_CHART_DEFINITION = {
+TIME_CHART_DEFINITION = {  # our predefined chart configurations
     'projects': {
         'key': 'project',
         'type': 'time',
@@ -85,7 +79,7 @@ TIME_CHART_DEFINITION = {
     },
 }
 
-CATEGORY_CHART_DEFINITION = {
+CATEGORY_CHART_DEFINITION = {  # our predefined chart configurations
     'catalogs': {
         'key': 'catalog',
         'type': 'category',

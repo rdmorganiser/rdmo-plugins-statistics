@@ -82,8 +82,6 @@ def compute_dashboard_summary(statistics):
 
 def compute_time_chart(name, definition, statistics, total, custom_settings):
     chart_settings = {}
-    if name == 'users':
-        chart_settings.update(get_chart_settings('cumulative_users', TIME_CHART_SETTINGS, custom_settings))
     chart_settings.update(get_chart_settings(name, TIME_CHART_SETTINGS, custom_settings))
 
     for mode in definition['modes']:
@@ -102,7 +100,7 @@ def compute_time_chart(name, definition, statistics, total, custom_settings):
 
 
 def compute_category_chart(name, definition, statistics, custom_settings):
-    chart_settings = get_chart_settings(name, CATEGORY_CHART_SETTINGS[name], custom_settings)
+    chart_settings = get_chart_settings(name, CATEGORY_CHART_SETTINGS, custom_settings)
 
     chart = {
         **definition,

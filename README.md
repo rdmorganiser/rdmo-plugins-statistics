@@ -113,22 +113,21 @@ RDMO_STATISTICS = {
     'project_progress': {
         'chart_color': '#e6a15c',
         'label_orientation': 'auto',
+        'orientation': 'vertical',
     },
 }
 ```
 
 The chart configuration can be overridden in `rdmo-app/config/settings/local.py` using the optional `RDMO_STATISTICS` setting. Only the values that should differ from the defaults need to be specified.
 
-The former `cumulative_users` settings key is deprecated. For compatibility, its values are used as fallbacks for missing `users` settings; explicit `users` settings take precedence. Both user-chart modes use the resulting unified settings.
-
-All charts are displayed as bar charts. Project progress is always vertical.
+All charts are displayed as bar charts. Catalog usage defaults to horizontal, and project progress defaults to vertical.
 
 Currently, the following configuration options are supported:
 
 - `chart_color`
 - `empty_periods` (time-based charts): include periods without new records when set to `True`
 - `label_orientation`: `auto`, `horizontal` or `vertical` (only effective on vertical bar charts)
-- `orientation` (catalog usage only): display the chart `horizontal` or `vertical`
+- `orientation` (category charts): display the chart `horizontal` or `vertical`
 
 ## Displayed Statistics
 

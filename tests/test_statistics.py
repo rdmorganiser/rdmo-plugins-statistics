@@ -14,7 +14,6 @@ from rdmo.projects.models import Project
 from rdmo.questions.models import Catalog
 
 from rdmo_plugins_statistics.charts import (
-    compute_dashboard_charts,
     compute_dashboard_summary,
     compute_project_progress_statistics,
 )
@@ -238,7 +237,7 @@ def test_catalog_chart_includes_all_catalogs_without_a_limit_control(client):
 
 @pytest.mark.django_db
 @override_settings(RDMO_STATISTICS={'project_progress': {'orientation': 'horizontal'}})
-def test_project_progress_always_uses_vertical_axes(client):
+def test_project_progress_can_use_horizontal_orientation(client):
     current_site = Site.objects.get_current()
     manager = get_user_model().objects.create_user(username='horizontal-progress-manager')
     manager.role.manager.add(current_site)
@@ -249,33 +248,11 @@ def test_project_progress_always_uses_vertical_axes(client):
     progress_chart = next(chart for chart in response.context['category_charts'] if chart['key'] == 'project-progress')
 
     assert progress_chart['chart_type'] == 'bar'
-    assert progress_chart['orientation'] == 'vertical'
-    assert progress_chart['x_axis_title'] == 'Progress (%)'
-    assert progress_chart['y_axis_title'] == 'Number of projects'
+    assert progress_chart['orientation'] == 'horizontal'
+    assert progress_chart['x_axis_title'] == 'Number of projects'
+    assert progress_chart['y_axis_title'] == 'Progress (%)'
     assert b'data-chart-type="bar"' in response.content
-    assert b'data-chart-orientation="vertical"' in response.content
-
-
-def test_cumulative_user_settings_are_a_legacy_fallback():
-    statistics = {
-        'projects': {'total': 0, 'created': [], 'total_over_time': [], 'progress': []},
-        'users': {'total': 0, 'registered': [], 'total_over_time': []},
-        'catalogs': {'usage': []},
-    }
-
-    charts = compute_dashboard_charts(statistics, {
-        'cumulative_users': {'chart_color': '#legacy', 'empty_periods': False},
-    })
-    user_chart = next(chart for chart in charts['time_charts'] if chart['key'] == 'user')
-    assert user_chart['chart_color'] == '#legacy'
-    assert user_chart['empty_periods'] is False
-
-    charts = compute_dashboard_charts(statistics, {
-        'cumulative_users': {'chart_color': '#legacy'},
-        'users': {'chart_color': '#current'},
-    })
-    user_chart = next(chart for chart in charts['time_charts'] if chart['key'] == 'user')
-    assert user_chart['chart_color'] == '#current'
+    assert b'data-chart-orientation="horizontal"' in response.content
 
 
 @pytest.mark.django_db
