@@ -123,10 +123,12 @@ for (const bootstrap5 of [false, true]) {
     })
 }
 
-test('Reset restores monthly dates and storage without changing a cumulative mode', () => {
+test('Dates clear independently and Reset restores defaults without changing a cumulative mode', () => {
     const { context, createTimeFilterControls, applyTimeChartMode } = load(false)
     const container = element()
-    for (const name of ['interval', 'start-date', 'end-date', 'clear-dates', 'date-error']) {
+    for (const name of [
+        'interval', 'start-date', 'end-date', 'clear-start-date', 'clear-end-date', 'clear-dates', 'date-error'
+    ]) {
         container.children[`.statistics-${name}`] = element()
     }
     const stored = new Map()
@@ -143,11 +145,22 @@ test('Reset restores monthly dates and storage without changing a cumulative mod
     const projects = chart()
     applyTimeChartMode(projects, modes[1], modes[0])
     const controls = createTimeFilterControls()
+    assert.equal(container.querySelector('.statistics-clear-start-date').disabled, false)
+    assert.equal(container.querySelector('.statistics-clear-end-date').disabled, false)
     container.querySelector('.statistics-start-date').value = '2026-03-01'
     container.querySelector('.statistics-start-date').listeners.change()
     assert.equal(controls.isValid(), false)
     let notifications = 0
     controls.subscribe(() => notifications++)
+    container.querySelector('.statistics-clear-start-date').listeners.click()
+    assert.equal(controls.filters.start, '')
+    assert.equal(controls.filters.end, '2026-02-01')
+    assert.equal(controls.isValid(), true)
+    assert.equal(stored.has('rdmo-statistics-start'), false)
+    assert.equal(stored.get('rdmo-statistics-end'), '2026-02-01')
+    assert.equal(context.window.location.search, '?interval=year&to=2026-02-01')
+    assert.equal(container.querySelector('.statistics-clear-start-date').disabled, true)
+    assert.equal(container.querySelector('.statistics-clear-end-date').disabled, false)
     container.querySelector('.statistics-clear-dates').listeners.click()
     assert.equal(controls.filters.interval, 'month')
     assert.equal(controls.filters.start, '')
@@ -155,7 +168,8 @@ test('Reset restores monthly dates and storage without changing a cumulative mod
     assert.equal(controls.isValid(), true)
     assert.equal(stored.get('rdmo-statistics-interval'), 'month')
     assert.equal(context.window.location.search, '?interval=month')
-    assert.equal(notifications, 1)
+    assert.equal(notifications, 2)
+    assert.equal(container.querySelector('.statistics-clear-end-date').disabled, true)
     assert.equal(container.querySelector('.statistics-clear-dates').disabled, true)
     assert.equal(projects.dataset.calculation, 'cumulative_count')
 })

@@ -161,6 +161,38 @@
   min-width: 0;
 }
 
+.statistics-date-input {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.statistics-clear-date {
+  position: absolute;
+  right: 2em;
+  top: 50%;
+  width: 1.5em;
+  height: 1.5em;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.15em;
+  line-height: 1;
+  opacity: 0.55;
+  cursor: pointer;
+}
+
+.statistics-clear-date:hover,
+.statistics-clear-date:focus {
+  opacity: 1;
+}
+
+.statistics-clear-date:disabled {
+  visibility: hidden;
+}
+
 .statistics-date-error {
   flex-basis: 100%;
   margin: 0;

@@ -120,12 +120,12 @@ RDMO_STATISTICS = {
 
 The chart configuration can be overridden in `rdmo-app/config/settings/local.py` using the optional `RDMO_STATISTICS` setting. Only the values that should differ from the defaults need to be specified.
 
-All charts are displayed as bar charts. Catalog usage defaults to horizontal, and project progress defaults to vertical.
+All charts are displayed as bar charts. Catalog usage defaults to horizontal, and project progress defaults to vertical. Time based charts are always displayed with vertical bars.
 
 Currently, the following configuration options are supported:
 
 - `chart_color`
-- `empty_periods` (time-based charts): include periods without new records when set to `True`
+- `empty_periods` (time-based charts): hide periods without new records when set to `False`
 - `label_orientation`: `auto`, `horizontal` or `vertical` (only effective on vertical bar charts)
 - `orientation` (category charts): display the chart `horizontal` or `vertical`
 
@@ -133,7 +133,7 @@ Currently, the following configuration options are supported:
 
 By default, the time-based charts display a shortened time range to improve readability. Users can expand or further restrict the displayed data using the From and To date filters.
 
-Each time chart has an independent toggle: off shows new records per period, on shows cumulative totals. Both mode labels remain visible beside the icon, with the active mode highlighted. Both charts start in New mode on every page load. Reset clears the dates and restores the monthly interval without changing either chart's mode.
+Each time chart has an independent toggle: off shows new records per period, on shows cumulative totals. Both mode labels remain visible beside the icon, with the active mode highlighted. Both charts start in New mode on every page load. The From and To dates can be cleared independently using the cross inside each field. Reset clears both dates and restores the monthly interval without changing either chart's mode.
 
 Chart controls use the loaded RDMO styling: Bootstrap 3 with Font Awesome toggles, or Bootstrap 5 with Bootstrap Icons toggles. No additional icon library is bundled.
 
