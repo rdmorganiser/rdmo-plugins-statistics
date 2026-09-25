@@ -47,12 +47,28 @@
     >
         <div class="statistics-filter-field">
             <label for="statistics-start">{% translate "From" %}</label>
-            <input type="date" id="statistics-start" class="form-control statistics-start-date">
+            <span class="statistics-date-input">
+                <input type="date" id="statistics-start" class="form-control statistics-start-date">
+                <button
+                    type="button"
+                    class="statistics-clear-date statistics-clear-start-date"
+                    aria-label="{% translate 'Clear from date' %}"
+                    title="{% translate 'Clear from date' %}"
+                ><span aria-hidden="true">&times;</span></button>
+            </span>
         </div>
 
         <div class="statistics-filter-field">
             <label for="statistics-end">{% translate "To" %}</label>
-            <input type="date" id="statistics-end" class="form-control statistics-end-date">
+            <span class="statistics-date-input">
+                <input type="date" id="statistics-end" class="form-control statistics-end-date">
+                <button
+                    type="button"
+                    class="statistics-clear-date statistics-clear-end-date"
+                    aria-label="{% translate 'Clear to date' %}"
+                    title="{% translate 'Clear to date' %}"
+                ><span aria-hidden="true">&times;</span></button>
+            </span>
         </div>
 
         <div class="statistics-filter-field">

@@ -199,6 +199,9 @@ def test_statistics_page_uses_current_site_data(client):
     assert response.content.count(b'class="form-control statistics-interval"') == 1
     assert b'class="form-control statistics-start-date"' in response.content
     assert b'class="form-control statistics-end-date"' in response.content
+    assert b'statistics-clear-start-date' in response.content
+    assert b'statistics-clear-end-date' in response.content
+    assert b'Reset' in response.content
     assert response.content.count(b'class="btn btn-default statistics-export-csv"') == 4
     assert response.content.count(b'class="btn btn-default statistics-export-image"') == 4
     assert response.content.count(b'aria-label="Download PNG"') == 4

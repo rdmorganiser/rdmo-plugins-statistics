@@ -24,6 +24,11 @@ const updateClearDatesButton = (button, filters) => {
     button.disabled = !filters.start && !filters.end && filters.interval === DEFAULT_TIME_INTERVAL
 }
 
+const updateClearDateButtons = (startButton, endButton, filters) => {
+    startButton.disabled = !filters.start
+    endButton.disabled = !filters.end
+}
+
 const getDateDisplayLabel = (row, interval) => {
     const [year, month, day] = row.key.slice(0, 10).split('-').map(Number)
     const date = new Date(year, month - 1, day)
@@ -569,6 +574,8 @@ const createTimeFilterControls = () => {
     const intervalSelect = container.querySelector('.statistics-interval')
     const startDateInput = container.querySelector('.statistics-start-date')
     const endDateInput = container.querySelector('.statistics-end-date')
+    const clearStartDateButton = container.querySelector('.statistics-clear-start-date')
+    const clearEndDateButton = container.querySelector('.statistics-clear-end-date')
     const clearDatesButton = container.querySelector('.statistics-clear-dates')
     const errorElement = container.querySelector('.statistics-date-error')
     const parameters = new URLSearchParams(window.location.search)
@@ -644,6 +651,7 @@ const createTimeFilterControls = () => {
 
     const notify = () => {
         updateValidity()
+        updateClearDateButtons(clearStartDateButton, clearEndDateButton, filters)
         updateClearDatesButton(clearDatesButton, filters)
         persist()
         updateUrl()
@@ -665,6 +673,18 @@ const createTimeFilterControls = () => {
         notify()
     })
 
+    clearStartDateButton.addEventListener('click', () => {
+        startDateInput.value = ''
+        filters.start = ''
+        notify()
+    })
+
+    clearEndDateButton.addEventListener('click', () => {
+        endDateInput.value = ''
+        filters.end = ''
+        notify()
+    })
+
     clearDatesButton.addEventListener('click', () => {
         intervalSelect.value = DEFAULT_TIME_INTERVAL
         startDateInput.value = ''
@@ -676,6 +696,7 @@ const createTimeFilterControls = () => {
     })
 
     updateValidity()
+    updateClearDateButtons(clearStartDateButton, clearEndDateButton, filters)
     updateClearDatesButton(clearDatesButton, filters)
     persist()
     updateUrl()
