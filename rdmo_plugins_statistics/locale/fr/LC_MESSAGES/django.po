@@ -217,6 +217,18 @@ msgstr "Total actuel"
 msgid "Show data"
 msgstr "Afficher les données"
 
+msgid "Clear from date"
+msgstr "Effacer la date de début"
+
+msgid "Clear to date"
+msgstr "Effacer la date de fin"
+
+msgid "Updating project charts…"
+msgstr "Mise à jour des graphiques des projets…"
+
+msgid "Project charts could not be updated."
+msgstr "Les graphiques des projets n’ont pas pu être mis à jour."
+
 #~ msgid "Measure"
 #~ msgstr "Mesure"
 
