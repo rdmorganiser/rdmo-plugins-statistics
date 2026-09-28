@@ -199,19 +199,7 @@ const getCumulativeStartValue = (rows, start) => {
     ), 0)
 }
 
-const addTimeRangeBoundaries = (
-    rows,
-    sourceRows,
-    filters,
-    calculationName,
-) => {
-    const startValue = (
-        calculationName === CUMULATIVE_CALCULATION &&
-        filters.start
-    )
-        ? getCumulativeStartValue(sourceRows, filters.start)
-        : 0
-
+const addTimeRangeBoundaries = (rows, filters, startValue) => {
     const boundaries = [
         filters.start && {
             key: getPeriodKey(filters.start, filters.interval),
@@ -257,20 +245,21 @@ const getTimeChartRows = (statistics, filters, container) => {
     const calculationName = container.dataset.calculation
     const calculation = timeCalculations[calculationName]
     const sourceRows = statistics[calculationName].day.rows
+    const cumulativeStartValue = calculationName === CUMULATIVE_CALCULATION && filters.start
+        ? getCumulativeStartValue(sourceRows, filters.start)
+        : 0
     let rows = groupTimeRows(sourceRows, filters, calculation)
 
     if (container.dataset.fillGaps === 'true') {
-        rows = addTimeRangeBoundaries(
-            rows,
-            sourceRows,
-            filters,
-            calculationName,
-        )
+        rows = addTimeRangeBoundaries(rows, filters, cumulativeStartValue)
         rows = fillMissingPeriods(rows, filters.interval)
     }
 
     if (calculationName === CUMULATIVE_CALCULATION) {
-        rows = carryCumulativeValues(rows)
+        rows = carryCumulativeValues(rows).map((row) => ({
+            ...row,
+            value: row.value - cumulativeStartValue,
+        }))
     }
 
     if (!filters.start && !filters.end) {
@@ -740,9 +729,12 @@ const getChartExportFilename = (container, filters, extension) => {
         ? `${filters.start || 'start'}-${filters.end || 'end'}`
         : 'all'
 
-    return filters.interval
-        ? `${siteName}-statistics-${name}${mode}-${filters.interval}-${range}.${extension}`
-        : `${siteName}-statistics-${name}.${extension}`
+    if (filters.interval || filters.start || filters.end) {
+        const timeView = filters.interval ? `${mode}-${filters.interval}` : ''
+        return `${siteName}-statistics-${name}${timeView}-${range}.${extension}`
+    }
+
+    return `${siteName}-statistics-${name}.${extension}`
 }
 
 const downloadCsv = (container, filters, preparedData) => {
@@ -867,12 +859,14 @@ const createStatisticsChart = (container, timeControls) => {
     const emptyElement = container.querySelector('.statistics-empty-message')
     const dataTable = container.querySelector('.statistics-data-table')
     const tableBody = dataTable.querySelector('tbody')
-    const statistics = JSON.parse(statisticsElement.textContent)
+    let statistics = JSON.parse(statisticsElement.textContent)
+    const initialStatistics = statistics
     const modeButton = container.querySelector('.statistics-mode-toggle')
     const modes = modeButton
         ? JSON.parse(document.getElementById(modeButton.dataset.modesId).textContent)
         : []
     let modeIndex = 0
+    let unavailable = false
 
     const statisticsTypeName = container.dataset.statisticsType
     const statisticsType = statisticsTypes[statisticsTypeName]
@@ -882,7 +876,12 @@ const createStatisticsChart = (container, timeControls) => {
         return
     }
 
-    const filters = statisticsTypeName === 'time' ? timeControls.filters : {}
+    const filters = statisticsTypeName === 'time'
+        ? timeControls.filters
+        : {
+            start: timeControls?.filters.start || '',
+            end: timeControls?.filters.end || ''
+        }
 
     if (statisticsTypeName === 'time') {
         applyTimeChartMode(container, modes[0], modes[1])
@@ -908,6 +907,15 @@ const createStatisticsChart = (container, timeControls) => {
     }
 
     const render = () => {
+        if (unavailable) {
+            chartLayout.hidden = true
+            dataTable.hidden = true
+            emptyElement.hidden = true
+            exportButton.disabled = true
+            imageExportButton.disabled = true
+            return
+        }
+
         const isInvalid = statisticsTypeName === 'time' && !timeControls.isValid()
 
         if (isInvalid) {
@@ -951,11 +959,120 @@ const createStatisticsChart = (container, timeControls) => {
     }
 
     render()
+
+    if (statisticsTypeName === 'category') {
+        return {
+            reset: () => {
+                statistics = initialStatistics
+                unavailable = false
+                render()
+            },
+            setStatistics: (value) => {
+                statistics = value
+                unavailable = false
+                render()
+            },
+            setUnavailable: () => {
+                unavailable = true
+                render()
+            }
+        }
+    }
+}
+
+const createProjectDateRangeControls = (container, timeControls, charts, fetchFunction = fetch) => {
+    const status = container.querySelector('.statistics-date-range-status')
+    let controller = null
+    let requestNumber = 0
+    let currentFilters = null
+
+    const update = async () => {
+        const { start, end } = timeControls.filters
+
+        if (!timeControls.isValid()) {
+            currentFilters = null
+            requestNumber++
+            controller?.abort()
+            charts.forEach((chart) => chart.setUnavailable())
+            status.hidden = true
+            return
+        }
+
+        const filterKey = `${start}|${end}`
+        if (filterKey === currentFilters) {
+            return
+        }
+        currentFilters = filterKey
+
+        requestNumber++
+        const thisRequest = requestNumber
+        controller?.abort()
+
+        if (!start && !end) {
+            charts.forEach((chart) => chart.reset())
+            status.hidden = true
+            return
+        }
+
+        controller = new AbortController()
+        charts.forEach((chart) => chart.setUnavailable())
+        status.textContent = status.dataset.loadingMessage
+        status.hidden = false
+
+        const url = new URL(container.dataset.projectDateRangeUrl, window.location.href)
+        if (start) {
+            url.searchParams.set('from', start)
+        }
+        if (end) {
+            url.searchParams.set('to', end)
+        }
+
+        try {
+            const response = await fetchFunction(url, { signal: controller.signal })
+            if (!response.ok) {
+                throw new Error(`Statistics request failed: ${response.status}`)
+            }
+
+            const statistics = await response.json()
+            if (thisRequest !== requestNumber) {
+                return
+            }
+
+            charts.forEach((chart, key) => {
+                const responseKey = key === 'project-progress' ? 'project_progress' : key
+                if (!statistics[responseKey]) {
+                    throw new Error(`Statistics response is missing ${responseKey}`)
+                }
+                chart.setStatistics(statistics[responseKey])
+            })
+            status.hidden = true
+        } catch (error) {
+            if (error.name === 'AbortError' || thisRequest !== requestNumber) {
+                return
+            }
+
+            charts.forEach((chart) => chart.setUnavailable())
+            status.textContent = status.dataset.errorMessage
+            status.hidden = false
+        }
+    }
+
+    timeControls.subscribe(update)
+    update()
 }
 
 const toggleIconPrefix = styleStatisticsControls()
 const timeControls = createTimeFilterControls()
 
+const categoryCharts = new Map()
 document.querySelectorAll('[data-statistics-chart]').forEach((container) => {
-    createStatisticsChart(container, timeControls)
+    const chart = createStatisticsChart(container, timeControls)
+    if (chart) {
+        categoryCharts.set(container.dataset.statisticsKey, chart)
+    }
 })
+
+const timeControlsElement = document.querySelector('[data-statistics-time-controls]')
+if (timeControlsElement && timeControls && categoryCharts.size) {
+    createProjectDateRangeControls(timeControlsElement, timeControls, categoryCharts)
+}

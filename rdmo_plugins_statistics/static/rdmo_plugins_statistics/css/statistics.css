@@ -199,6 +199,11 @@
   color: #b02a37;
 }
 
+.statistics-date-range-status {
+  flex-basis: 100%;
+  margin: 0;
+}
+
 .statistics-empty-message {
   margin: 1rem 0 0;
   color: #666;
@@ -218,6 +223,10 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   column-gap: 0.5rem;
+}
+
+.statistics-chart-layout[hidden] {
+  display: none;
 }
 
 .statistics-chart-layout > .statistics-chart-container,

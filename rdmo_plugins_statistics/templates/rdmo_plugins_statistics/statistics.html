@@ -44,6 +44,7 @@
         class="statistics-chart-card statistics-time-filters"
         data-statistics-time-controls
         data-invalid-date-message="{% translate 'The start date must not be after the end date.' %}"
+        data-project-date-range-url="{% url 'v1-statistics:project-date-range-statistics' %}"
     >
         <div class="statistics-filter-field">
             <label for="statistics-start">{% translate "From" %}</label>
@@ -86,6 +87,13 @@
         </button>
 
         <p class="statistics-date-error" role="alert" hidden></p>
+        <p
+            class="statistics-date-range-status"
+            role="status"
+            data-loading-message="{% translate 'Updating project charts…' %}"
+            data-error-message="{% translate 'Project charts could not be updated.' %}"
+            hidden
+        ></p>
     </div>
 
     {% for chart in time_charts %}
@@ -189,6 +197,7 @@
             class="statistics-section"
             data-statistics-chart
             data-statistics-type="{{ chart.type }}"
+            data-statistics-key="{{ chart.key }}"
             data-chart-type="{{ chart.chart_type }}"
             data-statistics-id="{{ statistics_id }}"
             data-site-name="{{ current_site.name }}"

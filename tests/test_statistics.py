@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime
 
 import pytest
 
@@ -292,6 +293,94 @@ def test_domain_statistics_apis_require_current_site_manager(client, url_name):
     user = get_user_model().objects.create_user(username=f'{url_name}-member')
     client.force_login(user)
 
+    assert client.get(url).status_code == 403
+
+
+@pytest.mark.django_db
+def test_project_date_range_statistics_api_filters_project_charts(client):
+    current_site = Site.objects.get_current()
+    other_site = Site.objects.create(domain='date-range-other.example.com', name='Date range other site')
+    manager = get_user_model().objects.create_user(username='date-range-manager')
+    manager.role.manager.add(current_site)
+
+    catalog = Catalog.objects.create(
+        uri_prefix='https://example.org', uri_path='date-range-catalog', title_lang1='Date range catalog',
+    )
+    unused_catalog = Catalog.objects.create(
+        uri_prefix='https://example.org', uri_path='unused-catalog', title_lang1='Unused catalog',
+    )
+    catalog.sites.add(current_site)
+    unused_catalog.sites.add(current_site)
+
+    included = Project.objects.create(
+        site=current_site, catalog=catalog, title='Included', progress_count=2, progress_total=4,
+    )
+    included_without_catalog = Project.objects.create(
+        site=current_site, title='Included without catalog', progress_count=0, progress_total=4,
+    )
+    excluded = Project.objects.create(
+        site=current_site, catalog=catalog, title='Excluded', progress_count=4, progress_total=4,
+    )
+    other_site_project = Project.objects.create(
+        site=other_site, catalog=catalog, title='Other site', progress_count=4, progress_total=4,
+    )
+    Project.objects.filter(pk=included.pk).update(
+        created=timezone.make_aware(datetime(2025, 2, 1, 12)),
+    )
+    Project.objects.filter(pk=included_without_catalog.pk).update(
+        created=timezone.make_aware(datetime(2025, 2, 28, 12)),
+    )
+    Project.objects.filter(pk=excluded.pk).update(
+        created=timezone.make_aware(datetime(2025, 3, 1, 12)),
+    )
+    Project.objects.filter(pk=other_site_project.pk).update(
+        created=timezone.make_aware(datetime(2025, 2, 15, 12)),
+    )
+
+    client.force_login(manager)
+    url = reverse('v1-statistics:project-date-range-statistics')
+    response = client.get(url, {'from': '2025-02-01', 'to': '2025-02-28'})
+
+    assert response.status_code == 200
+    payload = response.json()
+    catalog_rows = payload['catalog']['rows']
+    assert {row['label']: row['value'] for row in catalog_rows} == {
+        'Date range catalog': 1,
+        'Unused catalog': 0,
+    }
+    progress_rows = payload['project_progress']['rows']
+    assert progress_rows[0] == {'key': 0, 'label': '0-9%', 'value': 1}
+    assert progress_rows[5] == {'key': 50, 'label': '50-59%', 'value': 1}
+    assert sum(row['value'] for row in progress_rows) == 2
+
+    all_projects = client.get(url).json()
+    assert {row['label']: row['value'] for row in all_projects['catalog']['rows']} == {
+        'Date range catalog': 2,
+        'Unused catalog': 0,
+    }
+    assert sum(row['value'] for row in all_projects['project_progress']['rows']) == 3
+
+
+@pytest.mark.django_db
+def test_project_date_range_statistics_api_validates_date_ranges(client):
+    current_site = Site.objects.get_current()
+    manager = get_user_model().objects.create_user(username='date-range-validation-manager')
+    manager.role.manager.add(current_site)
+    client.force_login(manager)
+    url = reverse('v1-statistics:project-date-range-statistics')
+
+    assert client.get(url, {'from': 'not-a-date'}).status_code == 400
+    assert client.get(url, {'from': '2025-03-01', 'to': '2025-02-01'}).status_code == 400
+
+
+@pytest.mark.django_db
+def test_project_date_range_statistics_api_requires_current_site_manager(client):
+    url = reverse('v1-statistics:project-date-range-statistics')
+
+    assert client.get(url).status_code == 401
+
+    member = get_user_model().objects.create_user(username='date-range-member')
+    client.force_login(member)
     assert client.get(url).status_code == 403
 
 
