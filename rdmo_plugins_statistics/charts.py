@@ -131,6 +131,9 @@ def compute_dashboard_charts(statistics, custom_settings=None):
     projects, users = statistics['projects'], statistics['users']
     return {
         'summary': compute_dashboard_summary(statistics),
+        'catalog_options': sorted(
+            statistics['catalogs']['usage'], key=lambda catalog: (str(catalog['title']), catalog['id']),
+        ),
         'time_charts': [
             compute_time_chart(name, TIME_CHART_DEFINITION[name], rows, total, custom_settings)
             for name, rows, total in (

@@ -20,7 +20,13 @@ const element = (classes = []) => {
             replace: (from, to) => { if (names.delete(from)) names.add(to) },
         },
         setAttribute(name, value) { this.attributes[name] = value },
-        addEventListener(name, handler) { this.listeners[name] = handler },
+        addEventListener(name, handler) {
+            const previous = this.listeners[name]
+            this.listeners[name] = previous ? (...args) => {
+                previous(...args)
+                return handler(...args)
+            } : handler
+        },
         querySelector(selector) { return this.children[selector] },
         append(...children) { this.nodes = [...(this.nodes || []), ...children] },
         replaceChildren(...children) { this.nodes = children },
@@ -30,6 +36,7 @@ const element = (classes = []) => {
 const load = (bootstrap5) => {
     const button = element(['btn', 'btn-default'])
     const select = element(['form-control'])
+    const catalogSelect = element(['form-control'])
     const toggle = element(['btn-link'])
     const projectIcon = element(['statistics-summary-icon', 'fa', 'fa-folder-o'])
     projectIcon.dataset.icon = 'folder2'
@@ -43,7 +50,7 @@ const load = (bootstrap5) => {
             querySelector: () => null,
             querySelectorAll: (selector) => ({
                 '.statistics-page .btn-default': [button],
-                '.statistics-interval': [select],
+                '.statistics-interval, .statistics-catalog': [select, catalogSelect],
                 '.statistics-mode-toggle': [toggle],
                 '.statistics-summary-icon': [projectIcon, userIcon],
             }[selector] || []),
@@ -51,7 +58,7 @@ const load = (bootstrap5) => {
         },
     })
     vm.runInContext(source, context)
-    return { context, button, select, toggle, projectIcon, userIcon,
+    return { context, button, select, catalogSelect, toggle, projectIcon, userIcon,
         ...vm.runInContext('({ applyTimeChartMode, createStatisticsChart, createTimeFilterControls, createProjectDateRangeControls, getTimeChartRows, prepareChartData, statisticsTypes, updateTotal, downloadCsv, downloadChartImage })', context) }
 }
 
@@ -80,9 +87,10 @@ const modes = ['new', 'total'].map((key) => ({
 
 for (const bootstrap5 of [false, true]) {
     test(`Bootstrap ${bootstrap5 ? 5 : 3}: native controls and independent accessible toggles`, () => {
-        const { button, select, toggle, projectIcon, userIcon, applyTimeChartMode } = load(bootstrap5)
+        const { button, select, catalogSelect, toggle, projectIcon, userIcon, applyTimeChartMode } = load(bootstrap5)
         assert.ok(button.classList.contains(bootstrap5 ? 'btn-outline-secondary' : 'btn-default'))
         assert.ok(select.classList.contains(bootstrap5 ? 'form-select' : 'form-control'))
+        assert.ok(catalogSelect.classList.contains(bootstrap5 ? 'form-select' : 'form-control'))
         assert.equal(toggle.classList.contains('link'), bootstrap5)
         assert.equal(projectIcon.className, bootstrap5
             ? 'statistics-summary-icon bi bi-folder2'
@@ -125,8 +133,7 @@ for (const bootstrap5 of [false, true]) {
     })
 }
 
-test('Dates clear independently and Reset restores defaults without changing a cumulative mode', () => {
-    const { context, createTimeFilterControls, applyTimeChartMode } = load(false)
+const timeFilterHarness = (context, createTimeFilterControls, catalogSelect = null, search = '') => {
     const container = element()
     for (const name of [
         'interval', 'start-date', 'end-date', 'clear-start-date', 'clear-end-date', 'clear-dates', 'date-error'
@@ -140,13 +147,25 @@ test('Dates clear independently and Reset restores defaults without changing a c
         removeItem: (key) => stored.delete(key),
     }
     context.window = {
-        location: new URL('https://example.org/statistics/?interval=year&from=2025-01-01&to=2026-02-01'),
+        location: new URL(`https://example.org/statistics/${search}`),
         history: { replaceState: (_state, _title, url) => { context.window.location = url } },
     }
-    context.document.querySelector = () => container
+    context.document.querySelector = (selector) => selector === '.statistics-catalog' ? catalogSelect : container
+    return { container, stored, controls: createTimeFilterControls() }
+}
+
+test('Dates clear independently and Reset restores defaults without changing a cumulative mode', () => {
+    const { context, createTimeFilterControls, applyTimeChartMode } = load(false)
+    const catalogSelect = element()
+    catalogSelect.value = 'restored-by-browser'
+    const { container, stored, controls } = timeFilterHarness(
+        context, createTimeFilterControls, catalogSelect, '?interval=year&from=2025-01-01&to=2026-02-01',
+    )
+    assert.equal(catalogSelect.value, '')
+    catalogSelect.value = '42'
+    catalogSelect.listeners.change()
     const projects = chart()
     applyTimeChartMode(projects, modes[1], modes[0])
-    const controls = createTimeFilterControls()
     assert.equal(container.querySelector('.statistics-clear-start-date').disabled, false)
     assert.equal(container.querySelector('.statistics-clear-end-date').disabled, false)
     container.querySelector('.statistics-start-date').value = '2026-03-01'
@@ -157,20 +176,25 @@ test('Dates clear independently and Reset restores defaults without changing a c
     container.querySelector('.statistics-clear-start-date').listeners.click()
     assert.equal(controls.filters.start, '')
     assert.equal(controls.filters.end, '2026-02-01')
+    assert.equal(catalogSelect.value, '42')
     assert.equal(controls.isValid(), true)
     assert.equal(stored.has('rdmo-statistics-start'), false)
     assert.equal(stored.get('rdmo-statistics-end'), '2026-02-01')
     assert.equal(context.window.location.search, '?interval=year&to=2026-02-01')
     assert.equal(container.querySelector('.statistics-clear-start-date').disabled, true)
     assert.equal(container.querySelector('.statistics-clear-end-date').disabled, false)
+    container.querySelector('.statistics-clear-end-date').listeners.click()
+    assert.equal(controls.filters.end, '')
+    assert.equal(catalogSelect.value, '42')
     container.querySelector('.statistics-clear-dates').listeners.click()
     assert.equal(controls.filters.interval, 'month')
     assert.equal(controls.filters.start, '')
     assert.equal(controls.filters.end, '')
+    assert.equal(catalogSelect.value, '')
     assert.equal(controls.isValid(), true)
     assert.equal(stored.get('rdmo-statistics-interval'), 'month')
     assert.equal(context.window.location.search, '?interval=month')
-    assert.equal(notifications, 2)
+    assert.equal(notifications, 3)
     assert.equal(container.querySelector('.statistics-clear-end-date').disabled, true)
     assert.equal(container.querySelector('.statistics-clear-dates').disabled, true)
     assert.equal(projects.dataset.calculation, 'cumulative_count')
@@ -290,6 +314,107 @@ test('Cumulative date boundaries handle empty, open, and gap-free ranges', () =>
 
 const flushAsync = () => new Promise((resolve) => setImmediate(resolve))
 
+for (const bootstrap5 of [false, true]) {
+    test(`Bootstrap ${bootstrap5 ? 5 : 3}: overall Reset clears catalog filters and restores charts and exports`, async () => {
+        for (const combinedFilters of [false, true]) {
+            const { context, createTimeFilterControls, createStatisticsChart, createProjectDateRangeControls } = load(bootstrap5)
+            const selector = element()
+            selector.selectedOptions = [{ textContent: 'Catalog A' }]
+            const { container, controls } = timeFilterHarness(context, createTimeFilterControls, selector)
+            const reset = container.querySelector('.statistics-clear-dates')
+            container.dataset.projectDateRangeUrl = '/api/v1/statistics/projects/'
+            const status = element()
+            status.dataset.loadingMessage = 'Updating'
+            status.dataset.errorMessage = 'Could not update'
+            container.children['.statistics-date-range-status'] = status
+            const pending = []
+            const fetchFunction = (url, { signal }) => new Promise((resolve) => pending.push({ url, signal, resolve }))
+            const downloads = []
+            let blob
+            context.URL = class extends URL {
+                static createObjectURL(value) { blob = value; return 'blob:csv' }
+                static revokeObjectURL() {}
+            }
+            context.document.getElementById = () => ({
+                textContent: JSON.stringify({ rows: [{ key: 0, label: '0-9%', value: 10 }] }),
+            })
+            context.document.createElement = (tag) => tag === 'a'
+                ? { click() { downloads.push({ filename: this.download, href: this.href }) } }
+                : element()
+            context.Chart = class {
+                constructor(canvas, config) { this.canvas = canvas; this.data = config.data; this.options = config.options }
+                update() {}
+                toBase64Image() { return `data:image/png;base64,${this.data.datasets[0].data.join(',')}` }
+            }
+            const progress = element()
+            Object.assign(progress.dataset, {
+                statisticsId: 'project-progress-statistics-data', statisticsType: 'category', chartType: 'bar',
+                chartOrientation: 'vertical', chartTitle: 'Project progress', siteName: 'Example Site',
+                datasetLabel: 'Number of projects', xAxisTitle: 'Progress (%)', yAxisTitle: 'Number of projects',
+            })
+            for (const name of ['chart', 'chart-layout', 'export-csv', 'export-image', 'empty-message', 'data-table', 'chart-container']) {
+                progress.children[`.statistics-${name}`] = element()
+            }
+            progress.querySelector('.statistics-chart-container').style = {}
+            progress.querySelector('.statistics-data-table').children.tbody = element()
+            progress.querySelector('.statistics-chart').closest = () => progress
+            progress.children['.statistics-catalog'] = selector
+            const charts = new Map([['project-progress', createStatisticsChart(progress, controls)]])
+            createProjectDateRangeControls(container, controls, charts, fetchFunction, selector)
+            assert.equal(reset.disabled, true)
+
+            if (combinedFilters) {
+                for (const [name, value] of [['start-date', '2025-01-01'], ['end-date', '2025-01-31'], ['interval', 'year']]) {
+                    const input = container.querySelector(`.statistics-${name}`)
+                    input.value = value
+                    input.listeners.change()
+                }
+            }
+            selector.value = '42'
+            const selected = selector.listeners.change()
+            assert.equal(reset.disabled, false)
+            pending.at(-1).resolve({ ok: true, json: async () => ({
+                project_progress: { rows: [{ key: 50, label: '50-59%', value: 2 }] },
+            }) })
+            await selected
+            assert.equal(progress.querySelector('.statistics-data-table').children.tbody.nodes[0].nodes[1].textContent, 2)
+            selector.value = '99'
+            const staleRequest = selector.listeners.change()
+            const requestCount = pending.length
+            reset.listeners.click()
+            assert.equal(selector.value, '')
+            assert.equal(controls.filters.interval, 'month')
+            assert.equal(controls.filters.start, '')
+            assert.equal(controls.filters.end, '')
+            assert.equal(container.querySelector('.statistics-interval').value, 'month')
+            assert.equal(container.querySelector('.statistics-start-date').value, '')
+            assert.equal(container.querySelector('.statistics-end-date').value, '')
+            assert.equal(reset.disabled, true)
+            assert.equal(status.hidden, true)
+            assert.equal(pending.length, requestCount)
+            assert.ok(pending.every((request) => request.signal.aborted))
+            for (const request of pending) {
+                request.resolve({ ok: true, json: async () => ({
+                    project_progress: { rows: [{ key: 100, label: '100%', value: 999 }] },
+                }) })
+            }
+            await staleRequest
+            await flushAsync()
+            assert.equal(progress.querySelector('.statistics-chart-layout').hidden, false)
+            assert.equal(progress.querySelector('.statistics-chart').attributes['aria-label'], 'Project progress')
+            const row = progress.querySelector('.statistics-data-table').children.tbody.nodes[0]
+            assert.equal(row.nodes[0].textContent, '0-9%')
+            assert.equal(row.nodes[1].textContent, 10)
+            progress.querySelector('.statistics-export-csv').listeners.click()
+            assert.equal(downloads.at(-1).filename, 'Example-Site-statistics-project-progress.csv')
+            assert.match(await blob.text(), /"0-9%","10"$/)
+            progress.querySelector('.statistics-export-image').listeners.click()
+            assert.equal(downloads.at(-1).filename, 'Example-Site-statistics-project-progress.png')
+            assert.equal(downloads.at(-1).href, 'data:image/png;base64,10')
+        }
+    })
+}
+
 const projectDateRangeHarness = (filters, fetchFunction) => {
     const container = element()
     container.dataset.projectDateRangeUrl = '/api/v1/statistics/projects/'
@@ -320,10 +445,110 @@ const projectDateRangeHarness = (filters, fetchFunction) => {
     }
 
     return { container, status, chartState, timeControls,
-        start: (createProjectDateRangeControls) => createProjectDateRangeControls(
-            container, timeControls, charts, fetchFunction,
+        start: (createProjectDateRangeControls, catalogSelect = null) => createProjectDateRangeControls(
+            container, timeControls, charts, fetchFunction, catalogSelect,
         ) }
 }
+
+test('Catalog selection combines with dates and survives individual date changes', async () => {
+    const { context, createProjectDateRangeControls } = load(false)
+    context.window = { location: { href: 'https://example.org/statistics/' } }
+    const requests = []
+    const harness = projectDateRangeHarness(
+        { start: '2025-01-01', end: '2025-01-31', interval: 'month' },
+        async (url) => {
+            requests.push(new URL(url))
+            return { ok: true, json: async () => ({
+                catalog: { rows: [{ label: 'Catalog usage', value: 8 }] },
+                project_progress: { rows: [{ label: '50-59%', value: 2 }] },
+            }) }
+        },
+    )
+    const selector = element()
+    harness.start(createProjectDateRangeControls, selector)
+    await flushAsync()
+    assert.equal(selector.value, '')
+    assert.equal(requests[0].searchParams.has('catalog'), false)
+    const catalogUsage = harness.chartState.catalog
+
+    selector.value = '42'
+    await selector.listeners.change()
+    assert.equal(requests.at(-1).search, '?from=2025-01-01&to=2025-01-31&catalog=42')
+    assert.equal(harness.chartState.catalog, catalogUsage)
+    assert.equal(selector.disabled, undefined)
+
+    Object.assign(harness.timeControls.filters, { start: '', end: '' })
+    await harness.timeControls.listener()
+    assert.equal(requests.at(-1).search, '?catalog=42')
+    assert.equal(selector.value, '42')
+    const requestCount = requests.length
+    harness.timeControls.filters.interval = 'year'
+    await harness.timeControls.listener()
+    assert.equal(requests.length, requestCount)
+
+    selector.value = ''
+    await selector.listeners.change()
+    assert.equal(requests.length, requestCount)
+    assert.equal(harness.chartState.resets, 2)
+})
+
+test('Rapid catalog and date changes abort pending requests, ignore stale results, and recover from failures', async () => {
+    const { context, createProjectDateRangeControls } = load(false)
+    context.window = { location: { href: 'https://example.org/statistics/' } }
+    const pending = []
+    const harness = projectDateRangeHarness(
+        { start: '', end: '', interval: 'month' },
+        (url, { signal }) => new Promise((resolve) => pending.push({ url: new URL(url), signal, resolve })),
+    )
+    const selector = element()
+    harness.start(createProjectDateRangeControls, selector)
+    selector.value = '1'
+    const first = selector.listeners.change()
+    harness.timeControls.filters.start = '2025-01-01'
+    const second = harness.timeControls.listener()
+    selector.value = '2'
+    const third = selector.listeners.change()
+    assert.equal(pending[0].signal.aborted, true)
+    assert.equal(pending[1].signal.aborted, true)
+    assert.equal(pending[2].url.search, '?from=2025-01-01&catalog=2')
+
+    const payload = {
+        catalog: { rows: [{ label: 'January usage', value: 3 }] },
+        project_progress: { rows: [{ label: 'Latest catalog', value: 1 }] },
+    }
+    pending[2].resolve({ ok: true, json: async () => payload })
+    await third
+    for (const request of pending.slice(0, 2)) {
+        request.resolve({ ok: true, json: async () => ({ catalog: { rows: [] }, project_progress: { rows: [] } }) })
+    }
+    await Promise.all([first, second])
+    assert.equal(harness.chartState.progress, payload.project_progress)
+    assert.equal(harness.chartState.catalog, payload.catalog)
+
+    selector.value = '3'
+    const failed = selector.listeners.change()
+    pending[3].resolve({ ok: false, status: 500 })
+    await failed
+    assert.equal(harness.status.hidden, false)
+    assert.equal(harness.status.textContent, 'Could not update')
+    assert.equal(harness.chartState.catalog, payload.catalog)
+    assert.equal(selector.disabled, undefined)
+    const retry = selector.listeners.change()
+    pending[4].resolve({ ok: true, json: async () => payload })
+    await retry
+    assert.equal(harness.status.hidden, true)
+
+    selector.value = '4'
+    const stale = selector.listeners.change()
+    Object.assign(harness.timeControls.filters, { start: '', end: '' })
+    selector.value = ''
+    await selector.listeners.change()
+    assert.equal(pending[5].signal.aborted, true)
+    pending[5].resolve({ ok: true, json: async () => payload })
+    await stale
+    assert.equal(harness.chartState.progress, null)
+    assert.equal(harness.chartState.catalog, null)
+})
 
 test('Project date-range charts load on date changes and reset without a page reload', async () => {
     const { context, createProjectDateRangeControls } = load(false)
@@ -413,6 +638,8 @@ for (const bootstrap5 of [false, true]) {
         )
         const containers = new Map()
         const charts = new Map()
+        const catalogSelect = element(['form-control'])
+        catalogSelect.selectedOptions = [{ textContent: 'Catalog / A *' }]
         const downloads = []
         let blob
         context.URL = class extends URL {
@@ -442,6 +669,7 @@ for (const bootstrap5 of [false, true]) {
             Object.assign(container.dataset, {
                 statisticsId: `${key}-statistics-data`, statisticsType: 'category', chartType: 'bar',
                 chartOrientation: key === 'catalog' ? 'horizontal' : 'vertical',
+                chartTitle: key === 'catalog' ? 'Catalog usage' : 'Project progress',
                 siteName: 'Example Site', datasetLabel: 'Number of projects',
                 xAxisTitle: key === 'catalog' ? 'Number of projects' : 'Progress (%)',
                 yAxisTitle: key === 'catalog' ? 'Catalog' : 'Number of projects',
@@ -453,10 +681,13 @@ for (const bootstrap5 of [false, true]) {
             container.querySelector('.statistics-chart-container').style = {}
             container.querySelector('.statistics-data-table').children.tbody = element()
             container.querySelector('.statistics-chart').closest = () => container
+            if (key === 'project-progress') {
+                container.children['.statistics-catalog'] = catalogSelect
+            }
             containers.set(key, container)
             charts.set(key, createStatisticsChart(container, harness.timeControls))
         }
-        createProjectDateRangeControls(harness.container, harness.timeControls, charts, fetchFunction)
+        createProjectDateRangeControls(harness.container, harness.timeControls, charts, fetchFunction, catalogSelect)
 
         const assertExports = async (suffix, label, value) => {
             for (const [key, container] of containers) {
@@ -522,6 +753,60 @@ for (const bootstrap5 of [false, true]) {
         pending.at(-1).resolve({ ok: false, status: 500 })
         await flushAsync()
         assertUnavailable()
+
+        catalogSelect.value = '42'
+        const selected = catalogSelect.listeners.change()
+        const request = pending.at(-1)
+        assert.equal(request.url.search, '?from=2025-03-01&catalog=42')
+        request.resolve({ ok: true, json: async () => ({
+            catalog: { rows: [{ key: 1, label: 'Catalog usage', value: 4 }] },
+            project_progress: { rows: [{ key: 50, label: '50-59%', value: 2 }] },
+        }) })
+        await selected
+        const progress = containers.get('project-progress')
+        const usage = containers.get('catalog')
+        assert.equal(progress.querySelector('.statistics-chart').attributes['aria-label'],
+            'Project progress: Catalog / A *')
+        progress.querySelector('.statistics-export-csv').listeners.click()
+        assert.equal(downloads.at(-1).filename,
+            'Example-Site-statistics-project-progress-catalog-42-Catalog-A-2025-03-01-end.csv')
+        assert.match(await blob.text(), /"50-59%","2"$/)
+        progress.querySelector('.statistics-export-image').listeners.click()
+        assert.equal(downloads.at(-1).filename,
+            'Example-Site-statistics-project-progress-catalog-42-Catalog-A-2025-03-01-end.png')
+        assert.equal(downloads.at(-1).href, 'data:image/png;base64,2')
+        const tableRow = progress.querySelector('.statistics-data-table').children.tbody.nodes[0]
+        assert.equal(tableRow.nodes[0].textContent, '50-59%')
+        assert.equal(tableRow.nodes[1].textContent, 2)
+
+        catalogSelect.value = '99'
+        const empty = catalogSelect.listeners.change()
+        assert.equal(usage.querySelector('.statistics-chart-layout').hidden, false)
+        assert.equal(usage.querySelector('.statistics-export-csv').disabled, false)
+        pending.at(-1).resolve({ ok: true, json: async () => ({
+            project_progress: { rows: [{ key: 0, label: '0-9%', value: 0 }] },
+        }) })
+        await empty
+        assert.equal(progress.querySelector('.statistics-chart-layout').hidden, true)
+        assert.equal(progress.querySelector('.statistics-data-table').hidden, true)
+        assert.equal(progress.querySelector('.statistics-export-csv').disabled, true)
+        assert.equal(progress.querySelector('.statistics-export-image').disabled, true)
+        assert.equal(progress.querySelector('.statistics-empty-message').hidden, false)
+        assert.equal(catalogSelect.disabled, undefined)
+
+        catalogSelect.value = ''
+        const allCatalogs = catalogSelect.listeners.change()
+        assert.equal(pending.at(-1).url.searchParams.has('catalog'), false)
+        pending.at(-1).resolve({ ok: true, json: async () => ({
+            project_progress: { rows: [{ key: 50, label: '50-59%', value: 4 }] },
+        }) })
+        await allCatalogs
+        assert.equal(progress.querySelector('.statistics-chart').attributes['aria-label'], 'Project progress')
+        progress.querySelector('.statistics-export-csv').listeners.click()
+        assert.equal(downloads.at(-1).filename, 'Example-Site-statistics-project-progress-2025-03-01-end.csv')
+        harness.timeControls.filters.start = ''
+        await harness.timeControls.listener()
+        await assertExports('', 'All projects', 10)
     })
 }
 

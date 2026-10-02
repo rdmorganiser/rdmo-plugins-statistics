@@ -20,8 +20,8 @@ const CATEGORY_CHART_AXIS_SIZE = 80
 const HORIZONTAL_CATEGORY_SIZE = 32
 const VERTICAL_CATEGORY_SIZE = 40
 
-const updateClearDatesButton = (button, filters) => {
-    button.disabled = !filters.start && !filters.end && filters.interval === DEFAULT_TIME_INTERVAL
+const updateClearDatesButton = (button, filters, catalog = '') => {
+    button.disabled = !filters.start && !filters.end && filters.interval === DEFAULT_TIME_INTERVAL && !catalog
 }
 
 const updateClearDateButtons = (startButton, endButton, filters) => {
@@ -563,6 +563,7 @@ const createTimeFilterControls = () => {
     const clearStartDateButton = container.querySelector('.statistics-clear-start-date')
     const clearEndDateButton = container.querySelector('.statistics-clear-end-date')
     const clearDatesButton = container.querySelector('.statistics-clear-dates')
+    const catalogSelect = document.querySelector('.statistics-catalog')
     const errorElement = container.querySelector('.statistics-date-error')
     const parameters = new URLSearchParams(window.location.search)
     const filters = {
@@ -594,6 +595,12 @@ const createTimeFilterControls = () => {
     intervalSelect.value = filters.interval
     startDateInput.value = filters.start
     endDateInput.value = filters.end
+
+    if (catalogSelect) {
+        catalogSelect.value = ''
+    }
+
+    const updateResetButton = () => updateClearDatesButton(clearDatesButton, filters, catalogSelect?.value)
 
     const updateValidity = () => {
         startDateInput.max = filters.end
@@ -638,7 +645,7 @@ const createTimeFilterControls = () => {
     const notify = () => {
         updateValidity()
         updateClearDateButtons(clearStartDateButton, clearEndDateButton, filters)
-        updateClearDatesButton(clearDatesButton, filters)
+        updateResetButton()
         persist()
         updateUrl()
         listeners.forEach((listener) => listener())
@@ -678,12 +685,17 @@ const createTimeFilterControls = () => {
         filters.interval = DEFAULT_TIME_INTERVAL
         filters.start = ''
         filters.end = ''
+        if (catalogSelect) {
+            catalogSelect.value = ''
+        }
         notify()
     })
 
+    catalogSelect?.addEventListener('change', updateResetButton)
+
     updateValidity()
     updateClearDateButtons(clearStartDateButton, clearEndDateButton, filters)
-    updateClearDatesButton(clearDatesButton, filters)
+    updateResetButton()
     persist()
     updateUrl()
     clearLegacyTimeFilters()
@@ -718,6 +730,9 @@ const getChartExportFilename = (container, filters, extension) => {
     const siteName = sanitizeFilenamePart(container.dataset.siteName)
     const name = container.dataset.statisticsId
         .replace('-statistics-data', '')
+        + (filters.catalog
+            ? `-catalog-${filters.catalog}-${sanitizeFilenamePart(filters.catalogLabel)}`
+            : '')
     const mode = container.dataset.exportKey
         ? `-${container.dataset.exportKey}`
         : ''
@@ -806,7 +821,7 @@ const styleStatisticsControls = () => {
         document.querySelectorAll('.statistics-page .btn-default').forEach((button) => {
             button.classList.replace('btn-default', 'btn-outline-secondary')
         })
-        document.querySelectorAll('.statistics-interval').forEach((select) => {
+        document.querySelectorAll('.statistics-interval, .statistics-catalog').forEach((select) => {
             select.classList.replace('form-control', 'form-select')
         })
         document.querySelectorAll('.statistics-mode-toggle').forEach((button) => {
@@ -856,6 +871,7 @@ const createStatisticsChart = (container, timeControls) => {
     const emptyElement = container.querySelector('.statistics-empty-message')
     const dataTable = container.querySelector('.statistics-data-table')
     const tableBody = dataTable.querySelector('tbody')
+    const catalogSelect = container.querySelector('.statistics-catalog')
     let statistics = JSON.parse(statisticsElement.textContent)
     const initialStatistics = statistics
     const modeButton = container.querySelector('.statistics-mode-toggle')
@@ -877,7 +893,11 @@ const createStatisticsChart = (container, timeControls) => {
         ? timeControls.filters
         : {
             start: timeControls?.filters.start || '',
-            end: timeControls?.filters.end || ''
+            end: timeControls?.filters.end || '',
+            ...(catalogSelect?.value ? {
+                catalog: catalogSelect.value,
+                catalogLabel: catalogSelect.selectedOptions[0].textContent,
+            } : {}),
         }
 
     if (statisticsTypeName === 'time') {
@@ -925,6 +945,12 @@ const createStatisticsChart = (container, timeControls) => {
         }
 
         const preparedData = getPreparedData()
+
+        if (catalogSelect) {
+            chartElement.setAttribute('aria-label', catalogSelect.value
+                ? `${container.dataset.chartTitle}: ${catalogSelect.selectedOptions[0].textContent}`
+                : container.dataset.chartTitle)
+        }
 
         chartLayout.hidden = !preparedData.hasData
         dataTable.hidden = !preparedData.hasData
@@ -977,17 +1003,20 @@ const createStatisticsChart = (container, timeControls) => {
     }
 }
 
-const createProjectDateRangeControls = (container, timeControls, charts, fetchFunction = fetch) => {
+const createProjectDateRangeControls = (container, timeControls, charts, fetchFunction = fetch, catalogSelect = null) => {
     const status = container.querySelector('.statistics-date-range-status')
     let controller = null
     let requestNumber = 0
     let currentFilters = null
+    let catalogDateKey = '|'
 
     const update = async () => {
         const { start, end } = timeControls.filters
+        const catalog = catalogSelect?.value || ''
 
         if (!timeControls.isValid()) {
             currentFilters = null
+            catalogDateKey = null
             requestNumber++
             controller?.abort()
             charts.forEach((chart) => chart.setUnavailable())
@@ -995,7 +1024,7 @@ const createProjectDateRangeControls = (container, timeControls, charts, fetchFu
             return
         }
 
-        const filterKey = `${start}|${end}`
+        const filterKey = `${start}|${end}|${catalog}`
         if (filterKey === currentFilters) {
             return
         }
@@ -1005,14 +1034,23 @@ const createProjectDateRangeControls = (container, timeControls, charts, fetchFu
         const thisRequest = requestNumber
         controller?.abort()
 
-        if (!start && !end) {
+        if (!start && !end && !catalog) {
             charts.forEach((chart) => chart.reset())
+            catalogDateKey = '|'
             status.hidden = true
             return
         }
 
+        const dateKey = `${start}|${end}`
+        const affectedCharts = new Map([...charts].filter(([key]) => (
+            key !== 'catalog' || dateKey !== catalogDateKey
+        )))
+        if (affectedCharts.has('catalog')) {
+            catalogDateKey = null
+        }
+
         controller = new AbortController()
-        charts.forEach((chart) => chart.setUnavailable())
+        affectedCharts.forEach((chart) => chart.setUnavailable())
         status.textContent = status.dataset.loadingMessage
         status.hidden = false
 
@@ -1022,6 +1060,9 @@ const createProjectDateRangeControls = (container, timeControls, charts, fetchFu
         }
         if (end) {
             url.searchParams.set('to', end)
+        }
+        if (catalog) {
+            url.searchParams.set('catalog', catalog)
         }
 
         try {
@@ -1035,26 +1076,31 @@ const createProjectDateRangeControls = (container, timeControls, charts, fetchFu
                 return
             }
 
-            charts.forEach((chart, key) => {
+            affectedCharts.forEach((chart, key) => {
                 const responseKey = key === 'project-progress' ? 'project_progress' : key
                 if (!statistics[responseKey]) {
                     throw new Error(`Statistics response is missing ${responseKey}`)
                 }
                 chart.setStatistics(statistics[responseKey])
             })
+            if (affectedCharts.has('catalog')) {
+                catalogDateKey = dateKey
+            }
             status.hidden = true
         } catch (error) {
             if (error.name === 'AbortError' || thisRequest !== requestNumber) {
                 return
             }
 
-            charts.forEach((chart) => chart.setUnavailable())
+            affectedCharts.forEach((chart) => chart.setUnavailable())
+            currentFilters = null
             status.textContent = status.dataset.errorMessage
             status.hidden = false
         }
     }
 
     timeControls.subscribe(update)
+    catalogSelect?.addEventListener('change', update)
     update()
 }
 
@@ -1071,5 +1117,8 @@ document.querySelectorAll('[data-statistics-chart]').forEach((container) => {
 
 const timeControlsElement = document.querySelector('[data-statistics-time-controls]')
 if (timeControlsElement && timeControls && categoryCharts.size) {
-    createProjectDateRangeControls(timeControlsElement, timeControls, categoryCharts)
+    createProjectDateRangeControls(
+        timeControlsElement, timeControls, categoryCharts, fetch,
+        document.querySelector('.statistics-catalog'),
+    )
 }

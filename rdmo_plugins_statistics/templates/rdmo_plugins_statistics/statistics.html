@@ -198,6 +198,7 @@
             data-statistics-chart
             data-statistics-type="{{ chart.type }}"
             data-statistics-key="{{ chart.key }}"
+            data-chart-title="{{ chart.title }}"
             data-chart-type="{{ chart.chart_type }}"
             data-statistics-id="{{ statistics_id }}"
             data-site-name="{{ current_site.name }}"
@@ -218,6 +219,17 @@
 
             <div class="statistics-chart-card">
                 <div class="statistics-chart-controls">
+                    {% if chart.key == 'project-progress' %}
+                        <div class="statistics-filter-field">
+                            <label for="statistics-catalog">{% translate "Catalog" %}</label>
+                            <select id="statistics-catalog" class="form-control statistics-catalog">
+                                <option value="" selected>{% translate "All catalogs" %}</option>
+                                {% for catalog in catalog_options %}
+                                    <option value="{{ catalog.id }}">{{ catalog.title }}{% if not catalog.available %} *{% endif %}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% endif %}
                     <button type="button" class="btn btn-default statistics-export-csv">
                         {% translate "Export CSV" %}
                     </button>
@@ -270,6 +282,8 @@
 
                 {% if chart.note %}
                     <p class="statistics-chart-note">{{ chart.note }}</p>
+                {% elif chart.key == 'project-progress' %}
+                    <p class="statistics-chart-note">{% translate '* unavailable' %}</p>
                 {% endif %}
             </div>
         </section>

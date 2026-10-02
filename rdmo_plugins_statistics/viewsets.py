@@ -9,8 +9,8 @@ from .charts import compute_catalog_statistics, compute_project_progress_statist
 from .config import CATEGORY_CHART_DEFINITION
 from .serializers import (
     CatalogStatisticsSerializer,
-    ProjectDateRangeSerializer,
     ProjectDateRangeStatisticsSerializer,
+    ProjectsFilterSerializer,
     ProjectStatisticsSerializer,
     StatisticsSerializer,
     UserStatisticsSerializer,
@@ -71,15 +71,18 @@ class ProjectDateRangeStatisticsViewSet(GenericViewSet):
     def list(self, request, *args, **kwargs):
         query = {
             serializer_name: request.query_params[parameter_name]
-            for parameter_name, serializer_name in (('from', 'start'), ('to', 'end'))
+            for parameter_name, serializer_name in (('from', 'start'), ('to', 'end'), ('catalog', 'catalog'))
             if parameter_name in request.query_params
         }
-        filters = ProjectDateRangeSerializer(data=query)
+        site = Site.objects.get_current()
+        filters = ProjectsFilterSerializer(data=query)
         filters.is_valid(raise_exception=True)
         start, end = filters.validated_data.get('start'), filters.validated_data.get('end')
+        catalog = filters.validated_data.get('catalog')
 
-        site = Site.objects.get_current()
-        projects = fetch_project_statistics(site, start=start, end=end)
+        projects = fetch_project_statistics(
+            site, start=start, end=end, catalog_id=catalog.pk if catalog is not None else None,
+        )
         catalogs = fetch_catalog_statistics(site, start=start, end=end)
         statistics = {
             'catalog': compute_catalog_statistics(catalogs['usage']),

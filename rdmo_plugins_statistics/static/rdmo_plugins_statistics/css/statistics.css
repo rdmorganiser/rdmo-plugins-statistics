@@ -161,6 +161,11 @@
   min-width: 0;
 }
 
+.statistics-filter-field .statistics-catalog {
+  max-width: 24rem;
+  flex: 1 1 auto;
+}
+
 .statistics-date-input {
   position: relative;
   display: inline-flex;

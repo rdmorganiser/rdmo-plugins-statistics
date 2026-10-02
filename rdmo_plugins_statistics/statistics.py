@@ -30,8 +30,10 @@ def compute_cumulative_date_counts(rows):
     return cumulative_rows
 
 
-def fetch_project_statistics(site, start=None, end=None):
+def fetch_project_statistics(site, start=None, end=None, catalog_id=None):
     projects = Project.objects.filter(site=site)
+    if catalog_id is not None:
+        projects = projects.filter(catalog_id=catalog_id)
     if start:
         projects = projects.filter(created__date__gte=start)
     if end:

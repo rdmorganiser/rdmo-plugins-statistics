@@ -4,6 +4,7 @@ from datetime import datetime
 import pytest
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.sites.models import Site
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -19,8 +20,10 @@ from rdmo_plugins_statistics.charts import (
     compute_project_progress_statistics,
 )
 from rdmo_plugins_statistics.config import CATEGORY_CHART_DEFINITION
+from rdmo_plugins_statistics.serializers import ProjectsFilterSerializer
 from rdmo_plugins_statistics.statistics import (
     compute_cumulative_date_counts,
+    fetch_project_statistics,
     fetch_statistics_for_sites,
 )
 
@@ -375,6 +378,160 @@ def test_project_date_range_statistics_api_validates_date_ranges(client):
 
     assert client.get(url, {'from': 'not-a-date'}).status_code == 400
     assert client.get(url, {'from': '2025-03-01', 'to': '2025-02-01'}).status_code == 400
+
+
+@pytest.mark.parametrize('available', (True, False))
+@pytest.mark.django_db
+def test_project_progress_catalog_filter_combines_with_dates_and_preserves_catalog_usage(client, available):
+    site = Site.objects.get_current()
+    other_site = Site.objects.create(domain='catalog-filter.example.com', name='Other site')
+    manager = get_user_model().objects.create_user(username='catalog-filter-manager')
+    manager.role.manager.add(site)
+    client.force_login(manager)
+    catalog = Catalog.objects.create(
+        uri_prefix='https://example.org', uri_path='filtered-catalog', title_lang1='Selected catalog',
+        available=available,
+    )
+    group = Group.objects.create(name='Catalog readers')
+    catalog.groups.add(group)
+    assert not manager.groups.filter(pk=group.pk).exists()
+    assert not manager.has_perm('questions.view_catalog')
+    assert not manager.has_perm('questions.view_catalog_object', catalog)
+    other_catalog = Catalog.objects.create(
+        uri_prefix='https://example.org', uri_path='other-catalog', title_lang1='Other catalog',
+    )
+    empty_catalog = Catalog.objects.create(
+        uri_prefix='https://example.org', uri_path='empty-catalog', title_lang1='Empty catalog',
+    )
+    for item in (catalog, other_catalog, empty_catalog):
+        item.sites.add(site)
+    catalog.sites.add(other_site)
+    for count, total, month in ((None, None, 1), (1, 2, 1), (2, 2, 2)):
+        project = Project.objects.create(
+            site=site, catalog=catalog, title='Selected project', progress_count=count, progress_total=total,
+        )
+        Project.objects.filter(pk=project.pk).update(created=timezone.make_aware(datetime(2025, month, 15, 12)))
+    Project.objects.create(site=other_site, catalog=catalog, progress_count=2, progress_total=2)
+    for selected_catalog in (other_catalog, None):
+        project = Project.objects.create(
+            site=site, catalog=selected_catalog, progress_count=1, progress_total=4,
+        )
+        Project.objects.filter(pk=project.pk).update(created=timezone.make_aware(datetime(2025, 1, 15, 12)))
+
+    url = reverse('v1-statistics:project-date-range-statistics')
+    for dates, expected in (({}, {0: 1, 50: 1, 100: 1}),
+                            ({'from': '2025-01-01', 'to': '2025-01-31'}, {0: 1, 50: 1})):
+        response = client.get(url, {**dates, 'catalog': catalog.pk})
+        assert response.status_code == 200
+        payload = response.json()
+        assert len(payload['project_progress']['rows']) == 11
+        assert {row['key']: row['value'] for row in payload['project_progress']['rows'] if row['value']} == expected
+        assert payload['catalog'] == client.get(url, dates).json()['catalog']
+
+    assert sum(row['value'] for row in client.get(url).json()['project_progress']['rows']) == 5
+    empty_response = client.get(url, {'catalog': empty_catalog.pk})
+    assert empty_response.status_code == 200
+    assert all(row['value'] == 0 for row in empty_response.json()['project_progress']['rows'])
+    assert fetch_project_statistics(site, catalog_id=catalog.pk)['total'] == 3
+
+    page = client.get(reverse('statistics:index'))
+    assert [item['id'] for item in page.context['catalog_options']] == [empty_catalog.pk, other_catalog.pk, catalog.pk]
+    html = page.content.decode()
+    assert html.count('id="statistics-catalog"') == 1
+    assert '<label for="statistics-catalog">Catalog</label>' in html
+    assert '<option value="" selected>All catalogs</option>' in html
+    suffix = ' *' if not available else ''
+    assert f'<option value="{catalog.pk}">Selected catalog{suffix}</option>' in html
+
+
+@pytest.mark.django_db
+def test_project_progress_catalog_filter_rejects_invalid_and_other_site_catalogs(client):
+    site = Site.objects.get_current()
+    other_site = Site.objects.create(domain='private-catalog.example.com', name='Other site')
+    manager = get_user_model().objects.create_user(username='catalog-validation-manager')
+    manager.role.manager.add(site)
+    client.force_login(manager)
+    catalog = Catalog.objects.create(
+        uri_prefix='https://example.org', uri_path='private-catalog', title_lang1='Private catalog',
+    )
+    catalog.sites.add(other_site)
+    unassigned_catalog = Catalog.objects.create(
+        uri_prefix='https://example.org', uri_path='unassigned-catalog', title_lang1='Unassigned catalog',
+    )
+    unassigned_catalog.sites.clear()
+    url = reverse('v1-statistics:project-date-range-statistics')
+    for value in ('invalid', '', '0', '-1', '1.5', catalog.pk, unassigned_catalog.pk, catalog.pk + 1000):
+        response = client.get(url, {'catalog': value})
+        assert response.status_code == 400
+        assert 'catalog' in response.json()
+    errors = [client.get(url, {'catalog': value}).json()
+              for value in (catalog.pk, unassigned_catalog.pk, catalog.pk + 1000)]
+    assert errors[0] == errors[1] == errors[2] == {
+        'catalog': ['Select a catalog assigned to the current site.'],
+    }
+    page = client.get(reverse('statistics:index'))
+    assert page.context['catalog_options'] == []
+    assert b'Private catalog' not in page.content
+    assert b'Unassigned catalog' not in page.content
+
+
+@pytest.mark.django_db
+def test_projects_filter_serializer_rejects_catalogs_outside_the_current_site():
+    other_site = Site.objects.create(domain='serializer-other.example.com', name='Other site')
+    other_catalog = Catalog.objects.create(
+        uri_prefix='https://example.org', uri_path='serializer-other', title_lang1='Other site catalog',
+    )
+    other_catalog.sites.set([other_site])
+    unassigned_catalog = Catalog.objects.create(
+        uri_prefix='https://example.org', uri_path='serializer-unassigned', title_lang1='Unassigned catalog',
+    )
+    unassigned_catalog.sites.clear()
+
+    for value in (other_catalog.pk, unassigned_catalog.pk, unassigned_catalog.pk + 1000):
+        serializer = ProjectsFilterSerializer(data={'catalog': value})
+        assert not serializer.is_valid()
+        assert serializer.errors == {'catalog': ['Select a catalog assigned to the current site.']}
+    assert ProjectsFilterSerializer(data={}).is_valid()
+
+
+@pytest.mark.django_db
+def test_projects_filter_serializer_resolves_catalog_from_the_current_site():
+    site = Site.objects.get_current()
+    catalog = Catalog.objects.create(
+        uri_prefix='https://example.org', uri_path='serializer-catalog', title_lang1='Serializer catalog',
+    )
+    catalog.sites.add(site)
+    serializer = ProjectsFilterSerializer(
+        data={'catalog': str(catalog.pk), 'start': '2025-01-01', 'end': '2025-01-31'},
+    )
+
+    assert serializer.is_valid(), serializer.errors
+    assert serializer.validated_data['catalog'] == catalog
+    assert serializer.validated_data['start'].isoformat() == '2025-01-01'
+    assert serializer.validated_data['end'].isoformat() == '2025-01-31'
+
+
+@pytest.mark.parametrize('role', ('anonymous', 'member', 'editor', 'reviewer', 'other-site-manager'))
+@pytest.mark.django_db
+def test_catalog_filter_requires_statistics_permission_before_catalog_validation(client, monkeypatch, role):
+    site = Site.objects.get_current()
+    if role != 'anonymous':
+        user = get_user_model().objects.create_user(username=f'catalog-permission-{role}')
+        if role == 'other-site-manager':
+            other_site = Site.objects.create(domain='manager-other-site.example.com', name='Other site')
+            user.role.manager.add(other_site)
+        else:
+            getattr(user.role, role).add(site)
+        client.force_login(user)
+
+    def unexpected_catalog_query(_field):
+        pytest.fail('Catalog validation ran before the statistics permission check.')
+
+    monkeypatch.setattr(ProjectsFilterSerializer.CatalogField, 'get_queryset', unexpected_catalog_query)
+    response = client.get(reverse('v1-statistics:project-date-range-statistics'), {'catalog': 1})
+
+    assert response.status_code == (401 if role == 'anonymous' else 403)
+    assert 'catalog' not in response.json()
 
 
 @pytest.mark.django_db
