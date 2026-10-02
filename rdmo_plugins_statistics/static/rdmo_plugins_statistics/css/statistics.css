@@ -2,7 +2,7 @@
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem 0;
+  padding: 2rem 15px;
 }
 
 .statistics-page h1 {
@@ -161,10 +161,65 @@
   min-width: 0;
 }
 
+.statistics-filter-field .statistics-catalog {
+  max-width: 24rem;
+  flex: 1 1 auto;
+}
+
+.statistics-date-input {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.statistics-date-input input[type="date"] {
+  padding-inline-end: 2.5em;
+}
+
+.statistics-date-input input[type="date"]::-webkit-datetime-edit {
+  display: contents;
+}
+
+.statistics-date-input input[type="date"]::-webkit-calendar-picker-indicator {
+  margin-inline-start: 0.5em;
+}
+
+.statistics-clear-date {
+  position: absolute;
+  right: 0.5em;
+  top: 50%;
+  width: 1.5em;
+  height: 1.5em;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.15em;
+  line-height: 1;
+  opacity: 0.55;
+  cursor: pointer;
+}
+
+.statistics-clear-date:hover,
+.statistics-clear-date:focus {
+  opacity: 1;
+}
+
+.statistics-clear-date:disabled {
+  visibility: hidden;
+}
+
 .statistics-date-error {
   flex-basis: 100%;
   margin: 0;
   color: #b02a37;
+}
+
+.statistics-date-range-status {
+  flex-basis: 100%;
+  margin: 0;
 }
 
 .statistics-empty-message {
@@ -186,6 +241,10 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   column-gap: 0.5rem;
+}
+
+.statistics-chart-layout[hidden] {
+  display: none;
 }
 
 .statistics-chart-layout > .statistics-chart-container,

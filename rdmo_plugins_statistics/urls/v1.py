@@ -4,6 +4,7 @@ from rest_framework import routers
 
 from ..viewsets import (
     CatalogStatisticsViewSet,
+    ProjectDateRangeStatisticsViewSet,
     ProjectStatisticsViewSet,
     StatisticsViewSet,
     UserStatisticsViewSet,
@@ -18,5 +19,10 @@ router.register(r'user-statistics', UserStatisticsViewSet, basename='user-statis
 router.register(r'catalog-statistics', CatalogStatisticsViewSet, basename='catalog-statistics')
 
 urlpatterns = [
+    path(
+        'statistics/projects/',
+        ProjectDateRangeStatisticsViewSet.as_view({'get': 'list'}),
+        name='project-date-range-statistics',
+    ),
     path('', include(router.urls)),
 ]

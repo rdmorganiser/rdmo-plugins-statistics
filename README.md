@@ -11,6 +11,7 @@ The statistics page currently provides:
 - RDMO-style icon toggles between new and total counts, with visible mode labels
 - Catalog usage by number of projects
 - Distribution of projects by ten-point progress groups
+- Catalog selection for the project-progress distribution
 - Summary cards for projects and users
 - Daily, monthly, quarterly, and yearly aggregation for the time-based charts
 - Shared start and end date filters for all time-based charts
@@ -120,12 +121,12 @@ RDMO_STATISTICS = {
 
 The chart configuration can be overridden in `rdmo-app/config/settings/local.py` using the optional `RDMO_STATISTICS` setting. Only the values that should differ from the defaults need to be specified.
 
-All charts are displayed as bar charts. Catalog usage defaults to horizontal, and project progress defaults to vertical.
+All charts are displayed as bar charts. Catalog usage defaults to horizontal, and project progress defaults to vertical. Time based charts are always displayed with vertical bars.
 
 Currently, the following configuration options are supported:
 
 - `chart_color`
-- `empty_periods` (time-based charts): include periods without new records when set to `True`
+- `empty_periods` (time-based charts): hide periods without new records when set to `False`
 - `label_orientation`: `auto`, `horizontal` or `vertical` (only effective on vertical bar charts)
 - `orientation` (category charts): display the chart `horizontal` or `vertical`
 
@@ -133,7 +134,7 @@ Currently, the following configuration options are supported:
 
 By default, the time-based charts display a shortened time range to improve readability. Users can expand or further restrict the displayed data using the From and To date filters.
 
-Each time chart has an independent toggle: off shows new records per period, on shows cumulative totals. Both mode labels remain visible beside the icon, with the active mode highlighted. Both charts start in New mode on every page load. Reset clears the dates and restores the monthly interval without changing either chart's mode.
+Each time chart has an independent toggle: off shows new records per period, on shows cumulative totals. Both mode labels remain visible beside the icon, with the active mode highlighted. Both charts start in New mode on every page load. The From and To dates can be cleared independently using the cross inside each field. Reset clears both dates, restores the monthly interval, and selects All catalogs without changing either chart's mode.
 
 Chart controls use the loaded RDMO styling: Bootstrap 3 with Font Awesome toggles, or Bootstrap 5 with Bootstrap Icons toggles. No additional icon library is bundled.
 
@@ -150,7 +151,7 @@ The chart can display the data by:
 - Quarter
 - Year
 
-The user can restrict the displayed data with From and To date fields. New-project mode shows the total created during the displayed period; total-project mode includes projects created before the start date in its cumulative values.
+The user can restrict the displayed data with From and To date fields. New-project mode shows the total created during the displayed period; total-project mode displays the cumulative totals for that period, including projects created before the From date. The same rule applies to registered users in cumulative mode. The Current total remains the site's overall total.
 
 ### Users over time
 
@@ -160,9 +161,13 @@ New users belonging to the current site are grouped by their registration date a
 
 Catalogs assigned to the current site are displayed together with the number of projects from that site using each catalog. Unavailable catalogs remain included and are marked with an asterisk.
 
+Catalog statistics provide site-wide reporting under `statistics.view_statistics`. Catalogs assigned to the site are included even when restricted to user groups or unavailable for new projects. Project-picker visibility and catalog editor permissions do not restrict this reporting scope. Both the selector and API validation restrict catalogs to the current site; the filter serializer obtains that site from the server configuration. Unknown, unassigned, and other-site catalog IDs receive the same validation error, without catalog details. Projects are independently restricted to the current site, including when a catalog is shared by multiple sites.
+
 ### Project progress
 
 The project-progress bar chart groups all projects belonging to the current site into fixed ten-point ranges from 0–9% through 90–99%, with a separate 100% group. The percentage groups are shown on the x-axis and project counts on the y-axis. Projects whose interview has not started are included in the 0–9% group.
+
+The Catalog dropdown filters this distribution to projects using a selected catalog. It defaults to All catalogs, which includes projects without a catalog. Unavailable catalogs remain selectable and are marked with an asterisk. The selection combines with the shared From and To filters: these select projects by creation date, while progress represents their current state. Clearing either date individually preserves the catalog selection; overall Reset and reloading the page restore All catalogs. Reset remains available whenever a specific catalog is selected. Catalog Usage and the time charts are unaffected by the catalog selection. The data table and downloads reflect the filtered distribution, and filenames include the selected catalog's ID and title.
 
 ## Frontend implementation
 
@@ -201,6 +206,8 @@ The aggregate and domain-specific JSON representations are available from:
 All endpoints use the `statistics.view_statistics` permission and return data for the configured current site. They do not accept a site selector. Domain endpoints return the domain objects described above; the combined endpoint returns all three. Responses contain no chart colors, translated axis labels, or orientation.
 
 The Django template serializes chart rows with Django's `json_script` filter. The bundled `statistics.js` reads that data and creates the charts with Chart.js.
+
+The dashboard also uses `GET /api/v1/statistics/projects/` with optional `from`, `to`, and `catalog` parameters. Dates are inclusive ISO creation dates; `catalog` is the ID of a catalog assigned to the current site. Invalid selections return HTTP 400. The response contains `catalog` usage rows filtered by dates and `project_progress` distribution rows filtered by dates and catalog. Omitting `catalog` includes all projects on the site.
 
 
 The frontend code:

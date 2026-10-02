@@ -20,8 +20,13 @@ const CATEGORY_CHART_AXIS_SIZE = 80
 const HORIZONTAL_CATEGORY_SIZE = 32
 const VERTICAL_CATEGORY_SIZE = 40
 
-const updateClearDatesButton = (button, filters) => {
-    button.disabled = !filters.start && !filters.end && filters.interval === DEFAULT_TIME_INTERVAL
+const updateClearDatesButton = (button, filters, catalog = '') => {
+    button.disabled = !filters.start && !filters.end && filters.interval === DEFAULT_TIME_INTERVAL && !catalog
+}
+
+const updateClearDateButtons = (startButton, endButton, filters) => {
+    startButton.disabled = !filters.start
+    endButton.disabled = !filters.end
 }
 
 const getDateDisplayLabel = (row, interval) => {
@@ -194,19 +199,7 @@ const getCumulativeStartValue = (rows, start) => {
     ), 0)
 }
 
-const addTimeRangeBoundaries = (
-    rows,
-    sourceRows,
-    filters,
-    calculationName,
-) => {
-    const startValue = (
-        calculationName === CUMULATIVE_CALCULATION &&
-        filters.start
-    )
-        ? getCumulativeStartValue(sourceRows, filters.start)
-        : 0
-
+const addTimeRangeBoundaries = (rows, filters, startValue) => {
     const boundaries = [
         filters.start && {
             key: getPeriodKey(filters.start, filters.interval),
@@ -252,15 +245,13 @@ const getTimeChartRows = (statistics, filters, container) => {
     const calculationName = container.dataset.calculation
     const calculation = timeCalculations[calculationName]
     const sourceRows = statistics[calculationName].day.rows
+    const cumulativeStartValue = calculationName === CUMULATIVE_CALCULATION && filters.start
+        ? getCumulativeStartValue(sourceRows, filters.start)
+        : 0
     let rows = groupTimeRows(sourceRows, filters, calculation)
 
     if (container.dataset.fillGaps === 'true') {
-        rows = addTimeRangeBoundaries(
-            rows,
-            sourceRows,
-            filters,
-            calculationName,
-        )
+        rows = addTimeRangeBoundaries(rows, filters, cumulativeStartValue)
         rows = fillMissingPeriods(rows, filters.interval)
     }
 
@@ -569,7 +560,10 @@ const createTimeFilterControls = () => {
     const intervalSelect = container.querySelector('.statistics-interval')
     const startDateInput = container.querySelector('.statistics-start-date')
     const endDateInput = container.querySelector('.statistics-end-date')
+    const clearStartDateButton = container.querySelector('.statistics-clear-start-date')
+    const clearEndDateButton = container.querySelector('.statistics-clear-end-date')
     const clearDatesButton = container.querySelector('.statistics-clear-dates')
+    const catalogSelect = document.querySelector('.statistics-catalog')
     const errorElement = container.querySelector('.statistics-date-error')
     const parameters = new URLSearchParams(window.location.search)
     const filters = {
@@ -601,6 +595,12 @@ const createTimeFilterControls = () => {
     intervalSelect.value = filters.interval
     startDateInput.value = filters.start
     endDateInput.value = filters.end
+
+    if (catalogSelect) {
+        catalogSelect.value = ''
+    }
+
+    const updateResetButton = () => updateClearDatesButton(clearDatesButton, filters, catalogSelect?.value)
 
     const updateValidity = () => {
         startDateInput.max = filters.end
@@ -644,7 +644,8 @@ const createTimeFilterControls = () => {
 
     const notify = () => {
         updateValidity()
-        updateClearDatesButton(clearDatesButton, filters)
+        updateClearDateButtons(clearStartDateButton, clearEndDateButton, filters)
+        updateResetButton()
         persist()
         updateUrl()
         listeners.forEach((listener) => listener())
@@ -665,6 +666,18 @@ const createTimeFilterControls = () => {
         notify()
     })
 
+    clearStartDateButton.addEventListener('click', () => {
+        startDateInput.value = ''
+        filters.start = ''
+        notify()
+    })
+
+    clearEndDateButton.addEventListener('click', () => {
+        endDateInput.value = ''
+        filters.end = ''
+        notify()
+    })
+
     clearDatesButton.addEventListener('click', () => {
         intervalSelect.value = DEFAULT_TIME_INTERVAL
         startDateInput.value = ''
@@ -672,11 +685,17 @@ const createTimeFilterControls = () => {
         filters.interval = DEFAULT_TIME_INTERVAL
         filters.start = ''
         filters.end = ''
+        if (catalogSelect) {
+            catalogSelect.value = ''
+        }
         notify()
     })
 
+    catalogSelect?.addEventListener('change', updateResetButton)
+
     updateValidity()
-    updateClearDatesButton(clearDatesButton, filters)
+    updateClearDateButtons(clearStartDateButton, clearEndDateButton, filters)
+    updateResetButton()
     persist()
     updateUrl()
     clearLegacyTimeFilters()
@@ -711,6 +730,9 @@ const getChartExportFilename = (container, filters, extension) => {
     const siteName = sanitizeFilenamePart(container.dataset.siteName)
     const name = container.dataset.statisticsId
         .replace('-statistics-data', '')
+        + (filters.catalog
+            ? `-catalog-${filters.catalog}-${sanitizeFilenamePart(filters.catalogLabel)}`
+            : '')
     const mode = container.dataset.exportKey
         ? `-${container.dataset.exportKey}`
         : ''
@@ -719,9 +741,12 @@ const getChartExportFilename = (container, filters, extension) => {
         ? `${filters.start || 'start'}-${filters.end || 'end'}`
         : 'all'
 
-    return filters.interval
-        ? `${siteName}-statistics-${name}${mode}-${filters.interval}-${range}.${extension}`
-        : `${siteName}-statistics-${name}.${extension}`
+    if (filters.interval || filters.start || filters.end) {
+        const timeView = filters.interval ? `${mode}-${filters.interval}` : ''
+        return `${siteName}-statistics-${name}${timeView}-${range}.${extension}`
+    }
+
+    return `${siteName}-statistics-${name}.${extension}`
 }
 
 const downloadCsv = (container, filters, preparedData) => {
@@ -796,7 +821,7 @@ const styleStatisticsControls = () => {
         document.querySelectorAll('.statistics-page .btn-default').forEach((button) => {
             button.classList.replace('btn-default', 'btn-outline-secondary')
         })
-        document.querySelectorAll('.statistics-interval').forEach((select) => {
+        document.querySelectorAll('.statistics-interval, .statistics-catalog').forEach((select) => {
             select.classList.replace('form-control', 'form-select')
         })
         document.querySelectorAll('.statistics-mode-toggle').forEach((button) => {
@@ -846,12 +871,15 @@ const createStatisticsChart = (container, timeControls) => {
     const emptyElement = container.querySelector('.statistics-empty-message')
     const dataTable = container.querySelector('.statistics-data-table')
     const tableBody = dataTable.querySelector('tbody')
-    const statistics = JSON.parse(statisticsElement.textContent)
+    const catalogSelect = container.querySelector('.statistics-catalog')
+    let statistics = JSON.parse(statisticsElement.textContent)
+    const initialStatistics = statistics
     const modeButton = container.querySelector('.statistics-mode-toggle')
     const modes = modeButton
         ? JSON.parse(document.getElementById(modeButton.dataset.modesId).textContent)
         : []
     let modeIndex = 0
+    let unavailable = false
 
     const statisticsTypeName = container.dataset.statisticsType
     const statisticsType = statisticsTypes[statisticsTypeName]
@@ -861,19 +889,28 @@ const createStatisticsChart = (container, timeControls) => {
         return
     }
 
-    const filters = statisticsTypeName === 'time' ? timeControls.filters : {}
+    const getFilters = () => statisticsTypeName === 'time'
+        ? timeControls.filters
+        : {
+            start: timeControls?.filters.start || '',
+            end: timeControls?.filters.end || '',
+            ...(catalogSelect?.value ? {
+                catalog: catalogSelect.value,
+                catalogLabel: catalogSelect.selectedOptions[0].textContent,
+            } : {}),
+        }
 
     if (statisticsTypeName === 'time') {
         applyTimeChartMode(container, modes[0], modes[1])
     }
 
     const getPreparedData = () => {
-        return prepareChartData(statisticsType, statistics, filters, container)
+        return prepareChartData(statisticsType, statistics, getFilters(), container)
     }
 
     if (exportButton) {
         exportButton.addEventListener('click', () => {
-            downloadCsv(container, filters, getPreparedData())
+            downloadCsv(container, getFilters(), getPreparedData())
         })
     }
 
@@ -882,11 +919,20 @@ const createStatisticsChart = (container, timeControls) => {
 
     if (imageExportButton) {
         imageExportButton.addEventListener('click', () => {
-            downloadChartImage(container, filters, chart)
+            downloadChartImage(container, getFilters(), chart)
         })
     }
 
     const render = () => {
+        if (unavailable) {
+            chartLayout.hidden = true
+            dataTable.hidden = true
+            emptyElement.hidden = true
+            exportButton.disabled = true
+            imageExportButton.disabled = true
+            return
+        }
+
         const isInvalid = statisticsTypeName === 'time' && !timeControls.isValid()
 
         if (isInvalid) {
@@ -899,6 +945,12 @@ const createStatisticsChart = (container, timeControls) => {
         }
 
         const preparedData = getPreparedData()
+
+        if (catalogSelect) {
+            chartElement.setAttribute('aria-label', catalogSelect.value
+                ? `${container.dataset.chartTitle}: ${catalogSelect.selectedOptions[0].textContent}`
+                : container.dataset.chartTitle)
+        }
 
         chartLayout.hidden = !preparedData.hasData
         dataTable.hidden = !preparedData.hasData
@@ -930,11 +982,143 @@ const createStatisticsChart = (container, timeControls) => {
     }
 
     render()
+
+    if (statisticsTypeName === 'category') {
+        return {
+            reset: () => {
+                statistics = initialStatistics
+                unavailable = false
+                render()
+            },
+            setStatistics: (value) => {
+                statistics = value
+                unavailable = false
+                render()
+            },
+            setUnavailable: () => {
+                unavailable = true
+                render()
+            }
+        }
+    }
+}
+
+const createProjectDateRangeControls = (container, timeControls, charts, fetchFunction = fetch, catalogSelect = null) => {
+    const status = container.querySelector('.statistics-date-range-status')
+    let controller = null
+    let requestNumber = 0
+    let currentFilters = null
+    let catalogDateKey = '|'
+
+    const update = async () => {
+        const { start, end } = timeControls.filters
+        const catalog = catalogSelect?.value || ''
+
+        if (!timeControls.isValid()) {
+            currentFilters = null
+            catalogDateKey = null
+            requestNumber++
+            controller?.abort()
+            charts.forEach((chart) => chart.setUnavailable())
+            status.hidden = true
+            return
+        }
+
+        const filterKey = `${start}|${end}|${catalog}`
+        if (filterKey === currentFilters) {
+            return
+        }
+        currentFilters = filterKey
+
+        requestNumber++
+        const thisRequest = requestNumber
+        controller?.abort()
+
+        if (!start && !end && !catalog) {
+            charts.forEach((chart) => chart.reset())
+            catalogDateKey = '|'
+            status.hidden = true
+            return
+        }
+
+        const dateKey = `${start}|${end}`
+        const affectedCharts = new Map([...charts].filter(([key]) => (
+            key !== 'catalog' || dateKey !== catalogDateKey
+        )))
+        if (affectedCharts.has('catalog')) {
+            catalogDateKey = null
+        }
+
+        controller = new AbortController()
+        affectedCharts.forEach((chart) => chart.setUnavailable())
+        status.textContent = status.dataset.loadingMessage
+        status.hidden = false
+
+        const url = new URL(container.dataset.projectDateRangeUrl, window.location.href)
+        if (start) {
+            url.searchParams.set('from', start)
+        }
+        if (end) {
+            url.searchParams.set('to', end)
+        }
+        if (catalog) {
+            url.searchParams.set('catalog', catalog)
+        }
+
+        try {
+            const response = await fetchFunction(url, { signal: controller.signal })
+            if (!response.ok) {
+                throw new Error(`Statistics request failed: ${response.status}`)
+            }
+
+            const statistics = await response.json()
+            if (thisRequest !== requestNumber) {
+                return
+            }
+
+            affectedCharts.forEach((chart, key) => {
+                const responseKey = key === 'project-progress' ? 'project_progress' : key
+                if (!statistics[responseKey]) {
+                    throw new Error(`Statistics response is missing ${responseKey}`)
+                }
+                chart.setStatistics(statistics[responseKey])
+            })
+            if (affectedCharts.has('catalog')) {
+                catalogDateKey = dateKey
+            }
+            status.hidden = true
+        } catch (error) {
+            if (error.name === 'AbortError' || thisRequest !== requestNumber) {
+                return
+            }
+
+            affectedCharts.forEach((chart) => chart.setUnavailable())
+            currentFilters = null
+            status.textContent = status.dataset.errorMessage
+            status.hidden = false
+        }
+    }
+
+    timeControls.subscribe(update)
+    catalogSelect?.addEventListener('change', update)
+    update()
 }
 
 const toggleIconPrefix = styleStatisticsControls()
 const timeControls = createTimeFilterControls()
 
+const categoryCharts = new Map()
 document.querySelectorAll('[data-statistics-chart]').forEach((container) => {
-    createStatisticsChart(container, timeControls)
+    const chart = createStatisticsChart(container, timeControls)
+    if (chart) {
+        categoryCharts.set(container.dataset.statisticsKey, chart)
+    }
 })
+
+const timeControlsElement = document.querySelector('[data-statistics-time-controls]')
+if (timeControlsElement && timeControls && categoryCharts.size) {
+    createProjectDateRangeControls(
+        timeControlsElement, timeControls, categoryCharts, fetch,
+        document.querySelector('.statistics-catalog'),
+    )
+}

@@ -30,8 +30,15 @@ def compute_cumulative_date_counts(rows):
     return cumulative_rows
 
 
-def fetch_project_statistics(site):
+def fetch_project_statistics(site, start=None, end=None, catalog_id=None):
     projects = Project.objects.filter(site=site)
+    if catalog_id is not None:
+        projects = projects.filter(catalog_id=catalog_id)
+    if start:
+        projects = projects.filter(created__date__gte=start)
+    if end:
+        projects = projects.filter(created__date__lte=end)
+
     created = annotate_and_fetch_date_counts(projects, 'created')
     progress = Counter()
     for count, total, project_count in (
@@ -62,10 +69,16 @@ def fetch_user_statistics(site):
     }
 
 
-def fetch_catalog_statistics(site):
+def fetch_catalog_statistics(site, start=None, end=None):
+    project_filter = Q(projects__site=site)
+    if start:
+        project_filter &= Q(projects__created__date__gte=start)
+    if end:
+        project_filter &= Q(projects__created__date__lte=end)
+
     catalogs = (
         Catalog.objects.filter(sites=site)
-        .annotate(project_count=Count('projects', filter=Q(projects__site=site), distinct=True))
+        .annotate(project_count=Count('projects', filter=project_filter, distinct=True))
         .order_by('id')
     )
     return {

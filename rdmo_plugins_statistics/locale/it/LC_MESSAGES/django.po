@@ -126,6 +126,12 @@ msgstr "Utilizzo dei cataloghi"
 msgid "Catalog"
 msgstr "Catalogo"
 
+msgid "All catalogs"
+msgstr "Tutti i cataloghi"
+
+msgid "Select a catalog assigned to the current site."
+msgstr "Seleziona un catalogo assegnato al sito corrente."
+
 #: config.py:109
 msgid "No project progress data is available."
 msgstr "Non sono disponibili dati sull’avanzamento dei progetti."
@@ -216,6 +222,18 @@ msgstr "Totale attuale"
 #: templates/rdmo_plugins_statistics/statistics.html:210
 msgid "Show data"
 msgstr "Mostra dati"
+
+msgid "Clear from date"
+msgstr "Cancella la data di inizio"
+
+msgid "Clear to date"
+msgstr "Cancella la data di fine"
+
+msgid "Updating project charts…"
+msgstr "Aggiornamento dei grafici dei progetti…"
+
+msgid "Project charts could not be updated."
+msgstr "Impossibile aggiornare i grafici dei progetti."
 
 #~ msgid "Measure"
 #~ msgstr "Misura"
