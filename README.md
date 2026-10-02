@@ -150,7 +150,7 @@ The chart can display the data by:
 - Quarter
 - Year
 
-The user can restrict the displayed data with From and To date fields. New-project mode shows the total created during the displayed period; total-project mode accumulates only projects created within that period when a From date is set. The same rule applies to registered users in cumulative mode. The Current total remains the site's overall total.
+The user can restrict the displayed data with From and To date fields. New-project mode shows the total created during the displayed period; total-project mode displays the cumulative totals for that period, including projects created before the From date. The same rule applies to registered users in cumulative mode. The Current total remains the site's overall total.
 
 ### Users over time
 
