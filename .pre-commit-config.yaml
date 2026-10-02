@@ -6,7 +6,7 @@ repos:
     hooks:
       - id: check-hooks-apply
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: 2c9f875913ee60ca25ce70243dc24d5b6415598c # frozen: v4.6.0
     hooks:
       - id: check-ast
       # No XML files in this repository.
@@ -18,7 +18,11 @@ repos:
       - id: trailing-whitespace
       - id: debug-statements
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.4
+    rev: f8a3f8c471fb698229face5ed7640a64900b781e # frozen: v0.4.4
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: fa412071e4f5d44d44f9e365f4676f9df92456a2 # frozen: v1.30.1
+    hooks:
+      - id: zizmor
