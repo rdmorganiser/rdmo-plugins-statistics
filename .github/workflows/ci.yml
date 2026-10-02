@@ -16,6 +16,9 @@ on:
       - pyproject.toml
       - README.md
 
+permissions:
+  contents: read
+
 # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,15 +35,17 @@ jobs:
     name: Lint
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
       with:
         python-version: "3.12"
         cache: pip
     - run: python -m pip install --upgrade pip
     - run: python -m pip install -e .[dev]
     - name: Set up pre-commit cache
-      uses: actions/cache@v3
+      uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3
       with:
         path: ~/.cache/pre-commit
         key: lint-${{ hashFiles('.pre-commit-config.yaml') }}
@@ -55,8 +60,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
         with:
           python-version: "3.12"
           cache: pip
@@ -75,8 +82,10 @@ jobs:
           - name: RDMO 3.0 release branch
             rdmo: "rdmo @ git+https://github.com/rdmorganiser/rdmo.git@3.0.0/release"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
         with:
           python-version: "3.12"
           cache: pip
@@ -100,14 +109,17 @@ jobs:
     name: JavaScript tests
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: '.nvmrc'
       - run: node --test tests/statistics.test.cjs
 
   required-checks-pass:
     if: always()
+    permissions: {}
     needs:
       - lint
       - dev-setup
@@ -115,6 +127,6 @@ jobs:
       - javascript-test
     runs-on: ubuntu-22.04
     steps:
-      - uses: re-actors/alls-green@release/v1
+      - uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # release/v1
         with:
           jobs: ${{ toJSON(needs) }}
