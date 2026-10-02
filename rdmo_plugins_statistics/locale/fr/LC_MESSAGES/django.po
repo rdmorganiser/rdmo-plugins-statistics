@@ -126,6 +126,12 @@ msgstr "Utilisation des catalogues"
 msgid "Catalog"
 msgstr "Catalogue"
 
+msgid "All catalogs"
+msgstr "Tous les catalogues"
+
+msgid "Select a catalog assigned to the current site."
+msgstr "Sélectionnez un catalogue attribué au site actuel."
+
 #: config.py:109
 msgid "No project progress data is available."
 msgstr "Aucune donnée d’avancement des projets n’est disponible."
