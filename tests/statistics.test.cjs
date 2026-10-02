@@ -22,6 +22,8 @@ const element = (classes = []) => {
         setAttribute(name, value) { this.attributes[name] = value },
         addEventListener(name, handler) { this.listeners[name] = handler },
         querySelector(selector) { return this.children[selector] },
+        append(...children) { this.nodes = [...(this.nodes || []), ...children] },
+        replaceChildren(...children) { this.nodes = children },
     }
 }
 
@@ -50,7 +52,7 @@ const load = (bootstrap5) => {
     })
     vm.runInContext(source, context)
     return { context, button, select, toggle, projectIcon, userIcon,
-        ...vm.runInContext('({ applyTimeChartMode, createTimeFilterControls, createProjectDateRangeControls, getTimeChartRows, prepareChartData, statisticsTypes, updateTotal, downloadCsv, downloadChartImage })', context) }
+        ...vm.runInContext('({ applyTimeChartMode, createStatisticsChart, createTimeFilterControls, createProjectDateRangeControls, getTimeChartRows, prepareChartData, statisticsTypes, updateTotal, downloadCsv, downloadChartImage })', context) }
 }
 
 const chart = () => {
@@ -174,7 +176,7 @@ test('Dates clear independently and Reset restores defaults without changing a c
     assert.equal(projects.dataset.calculation, 'cumulative_count')
 })
 
-test('Cumulative project and user charts count only records in the selected range', async () => {
+test('Cumulative project and user charts retain records before the selected range', async () => {
     const {
         context, applyTimeChartMode, getTimeChartRows, prepareChartData, statisticsTypes, updateTotal, downloadCsv,
     } = load(false)
@@ -200,13 +202,13 @@ test('Cumulative project and user charts count only records in the selected rang
 
     const cumulativeRows = getTimeChartRows(statistics, filters, projects)
     assert.deepEqual(Array.from(cumulativeRows, ({ key, value }) => [key, value]), [
-        ['2025-02-01', 3],
-        ['2025-03-01', 3],
-        ['2025-04-01', 7],
+        ['2025-02-01', 10],
+        ['2025-03-01', 10],
+        ['2025-04-01', 14],
     ])
     const displayed = element()
     updateTotal(displayed, cumulativeRows, 'cumulative_count')
-    assert.equal(displayed.textContent, 7)
+    assert.equal(displayed.textContent, 14)
 
     applyTimeChartMode(projects, modes[0], modes[1])
     const newRows = getTimeChartRows(statistics, filters, projects)
@@ -217,7 +219,7 @@ test('Cumulative project and user charts count only records in the selected rang
     const users = element()
     users.dataset.calculation = 'cumulative_count'
     users.dataset.fillGaps = 'true'
-    assert.equal(getTimeChartRows(statistics, filters, users).at(-1).value, 7)
+    assert.equal(getTimeChartRows(statistics, filters, users).at(-1).value, 14)
 
     applyTimeChartMode(projects, modes[1], modes[0])
     projects.dataset.siteName = 'Example Site'
@@ -234,7 +236,7 @@ test('Cumulative project and user charts count only records in the selected rang
     context.document.createElement = () => link
     downloadCsv(projects, filters, preparedData)
     assert.equal(link.download, 'Example-Site-statistics-project-total-month-2025-02-10-2025-04-30.csv')
-    assert.match((await blob.text()).split('\n').at(-1), /,"7"$/)
+    assert.match((await blob.text()).split('\n').at(-1), /,"14"$/)
 })
 
 test('Cumulative date boundaries handle empty, open, and gap-free ranges', () => {
@@ -252,8 +254,22 @@ test('Cumulative date boundaries handle empty, open, and gap-free ranges', () =>
 
     const emptyFilters = { interval: 'month', start: '2025-03-01', end: '2025-03-31' }
     const emptyRows = getTimeChartRows(statistics, emptyFilters, container)
-    assert.deepEqual(Array.from(emptyRows, ({ value }) => value), [0])
-    assert.equal(statisticsTypes.time.hasData(statistics, emptyFilters, container, emptyRows), false)
+    assert.deepEqual(Array.from(emptyRows, ({ value }) => value), [10])
+    assert.equal(statisticsTypes.time.hasData(statistics, emptyFilters, container, emptyRows), true)
+
+    const beforeFirstFilters = { interval: 'month', start: '2024-12-01', end: '2024-12-31' }
+    const beforeFirstRows = getTimeChartRows(statistics, beforeFirstFilters, container)
+    assert.deepEqual(Array.from(beforeFirstRows, ({ value }) => value), [0])
+    assert.equal(statisticsTypes.time.hasData(statistics, beforeFirstFilters, container, beforeFirstRows), false)
+
+    const fromOnlyRows = getTimeChartRows(
+        statistics, { interval: 'month', start: '2025-03-01', end: '' }, container,
+    )
+    assert.deepEqual(Array.from(fromOnlyRows, ({ value }) => value), [10, 14])
+    const afterLastRows = getTimeChartRows(
+        statistics, { interval: 'month', start: '2025-05-01', end: '2025-06-30' }, container,
+    )
+    assert.deepEqual(Array.from(afterLastRows, ({ value }) => value), [14, 14])
 
     const toOnlyRows = getTimeChartRows(
         statistics, { interval: 'month', start: '', end: '2025-03-31' }, container,
@@ -268,7 +284,8 @@ test('Cumulative date boundaries handle empty, open, and gap-free ranges', () =>
     const withoutGaps = getTimeChartRows(
         statistics, { interval: 'month', start: '2025-02-10', end: '2025-04-30' }, container,
     )
-    assert.deepEqual(Array.from(withoutGaps, ({ value }) => value), [5, 9])
+    assert.deepEqual(Array.from(withoutGaps, ({ value }) => value), [10, 14])
+    assert.equal(getTimeChartRows(statistics, emptyFilters, container).length, 0)
 })
 
 const flushAsync = () => new Promise((resolve) => setImmediate(resolve))
@@ -383,6 +400,130 @@ test('Project date-range chart requests ignore stale results and report failures
     assert.equal(harness.status.textContent, 'Could not update')
     assert.equal(harness.status.hidden, false)
 })
+
+for (const bootstrap5 of [false, true]) {
+    test(`Bootstrap ${bootstrap5 ? 5 : 3}: category exports follow live filters and request state`, async () => {
+        const { context, createStatisticsChart, createProjectDateRangeControls } = load(bootstrap5)
+        context.window = { location: { href: 'https://example.org/statistics/' } }
+        const pending = []
+        const fetchFunction = (url) => new Promise((resolve) => pending.push({ url: new URL(url), resolve }))
+        const harness = projectDateRangeHarness(
+            { start: '', end: '', interval: 'month' },
+            fetchFunction,
+        )
+        const containers = new Map()
+        const charts = new Map()
+        const downloads = []
+        let blob
+        context.URL = class extends URL {
+            static createObjectURL(value) { blob = value; return 'blob:csv' }
+            static revokeObjectURL() {}
+        }
+        context.document.getElementById = () => ({
+            textContent: JSON.stringify({ rows: [{ key: 1, label: 'All projects', value: 10 }] }),
+        })
+        context.document.createElement = (tag) => tag === 'a'
+            ? { click() { downloads.push({ filename: this.download, href: this.href }) } }
+            : element()
+        context.Chart = class {
+            constructor(canvas, config) {
+                this.canvas = canvas
+                this.data = config.data
+                this.options = config.options
+            }
+            update() {}
+            toBase64Image(type) {
+                assert.equal(type, 'image/png')
+                return `data:image/png;base64,${this.data.datasets[0].data.join(',')}`
+            }
+        }
+        for (const key of ['catalog', 'project-progress']) {
+            const container = element()
+            Object.assign(container.dataset, {
+                statisticsId: `${key}-statistics-data`, statisticsType: 'category', chartType: 'bar',
+                chartOrientation: key === 'catalog' ? 'horizontal' : 'vertical',
+                siteName: 'Example Site', datasetLabel: 'Number of projects',
+                xAxisTitle: key === 'catalog' ? 'Number of projects' : 'Progress (%)',
+                yAxisTitle: key === 'catalog' ? 'Catalog' : 'Number of projects',
+            })
+            for (const name of ['chart', 'chart-layout', 'total', 'export-csv', 'export-image',
+                'empty-message', 'data-table', 'chart-container']) {
+                container.children[`.statistics-${name}`] = element()
+            }
+            container.querySelector('.statistics-chart-container').style = {}
+            container.querySelector('.statistics-data-table').children.tbody = element()
+            container.querySelector('.statistics-chart').closest = () => container
+            containers.set(key, container)
+            charts.set(key, createStatisticsChart(container, harness.timeControls))
+        }
+        createProjectDateRangeControls(harness.container, harness.timeControls, charts, fetchFunction)
+
+        const assertExports = async (suffix, label, value) => {
+            for (const [key, container] of containers) {
+                const csvButton = container.querySelector('.statistics-export-csv')
+                const pngButton = container.querySelector('.statistics-export-image')
+                assert.equal(csvButton.disabled, false)
+                assert.equal(pngButton.disabled, false)
+                csvButton.listeners.click()
+                assert.equal(downloads.at(-1).filename, `Example-Site-statistics-${key}${suffix}.csv`)
+                assert.match(await blob.text(), new RegExp(`"${label}","${value}"$`))
+                pngButton.listeners.click()
+                assert.equal(downloads.at(-1).filename, `Example-Site-statistics-${key}${suffix}.png`)
+                assert.equal(downloads.at(-1).href, `data:image/png;base64,${value}`)
+                assert.equal(container.querySelector('.statistics-total').textContent, value)
+                const tableRow = container.querySelector('.statistics-data-table').children.tbody.nodes[0]
+                assert.equal(tableRow.nodes[0].textContent, label)
+                assert.equal(tableRow.nodes[1].textContent, value)
+            }
+        }
+        const assertUnavailable = () => {
+            for (const container of containers.values()) {
+                assert.equal(container.querySelector('.statistics-export-csv').disabled, true)
+                assert.equal(container.querySelector('.statistics-export-image').disabled, true)
+                assert.equal(container.querySelector('.statistics-chart-layout').hidden, true)
+            }
+        }
+        const applyRange = async (start, end, value) => {
+            Object.assign(harness.timeControls.filters, { start, end })
+            harness.timeControls.listener()
+            assertUnavailable()
+            const request = pending.at(-1)
+            assert.equal(request.url.searchParams.get('from'), start || null)
+            assert.equal(request.url.searchParams.get('to'), end || null)
+            const statistics = { rows: [{ key: 1, label: 'Filtered projects', value }] }
+            request.resolve({ ok: true, json: async () => ({ catalog: statistics, project_progress: statistics }) })
+            await flushAsync()
+            await assertExports(`-${start || 'start'}-${end || 'end'}`, 'Filtered projects', value)
+        }
+
+        await assertExports('', 'All projects', 10)
+        assert.equal(pending.length, 0)
+        await applyRange('2025-01-01', '2025-01-31', 2)
+        await applyRange('2025-02-01', '2025-02-28', 3)
+        harness.timeControls.filters.interval = 'year'
+        harness.timeControls.listener()
+        assert.equal(pending.length, 2)
+        await assertExports('-2025-02-01-2025-02-28', 'Filtered projects', 3)
+        await applyRange('', '2025-02-28', 4)
+        await applyRange('2025-02-01', '', 5)
+
+        Object.assign(harness.timeControls.filters, { start: '', end: '', interval: 'month' })
+        harness.timeControls.listener()
+        await assertExports('', 'All projects', 10)
+        assert.equal(pending.length, 4)
+
+        harness.timeControls.valid = false
+        harness.timeControls.listener()
+        assertUnavailable()
+        harness.timeControls.valid = true
+        harness.timeControls.filters.start = '2025-03-01'
+        harness.timeControls.listener()
+        assertUnavailable()
+        pending.at(-1).resolve({ ok: false, status: 500 })
+        await flushAsync()
+        assertUnavailable()
+    })
+}
 
 test('CSV headers and filenames follow the selected chart mode', async () => {
     const { context, applyTimeChartMode, downloadCsv } = load(false)

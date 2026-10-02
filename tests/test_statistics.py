@@ -296,8 +296,13 @@ def test_domain_statistics_apis_require_current_site_manager(client, url_name):
     assert client.get(url).status_code == 403
 
 
+@pytest.mark.parametrize(('query', 'expected_progress'), (
+    ({'from': '2025-02-01', 'to': '2025-02-28'}, {0: 1, 50: 1}),
+    ({'from': '2025-02-28'}, {0: 1, 100: 1}),
+    ({'to': '2025-02-01'}, {50: 1}),
+))
 @pytest.mark.django_db
-def test_project_date_range_statistics_api_filters_project_charts(client):
+def test_project_date_range_statistics_api_filters_project_charts(client, query, expected_progress):
     current_site = Site.objects.get_current()
     other_site = Site.objects.create(domain='date-range-other.example.com', name='Date range other site')
     manager = get_user_model().objects.create_user(username='date-range-manager')
@@ -339,7 +344,7 @@ def test_project_date_range_statistics_api_filters_project_charts(client):
 
     client.force_login(manager)
     url = reverse('v1-statistics:project-date-range-statistics')
-    response = client.get(url, {'from': '2025-02-01', 'to': '2025-02-28'})
+    response = client.get(url, query)
 
     assert response.status_code == 200
     payload = response.json()
@@ -349,9 +354,8 @@ def test_project_date_range_statistics_api_filters_project_charts(client):
         'Unused catalog': 0,
     }
     progress_rows = payload['project_progress']['rows']
-    assert progress_rows[0] == {'key': 0, 'label': '0-9%', 'value': 1}
-    assert progress_rows[5] == {'key': 50, 'label': '50-59%', 'value': 1}
-    assert sum(row['value'] for row in progress_rows) == 2
+    assert {row['key']: row['value'] for row in progress_rows if row['value']} == expected_progress
+    assert sum(row['value'] for row in progress_rows) == sum(expected_progress.values())
 
     all_projects = client.get(url).json()
     assert {row['label']: row['value'] for row in all_projects['catalog']['rows']} == {

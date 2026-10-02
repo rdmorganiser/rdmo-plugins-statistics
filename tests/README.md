@@ -6,6 +6,19 @@ Install the development dependencies from a source checkout:
 pip install -e '.[dev]'
 ```
 
+### JavaScript tests
+
+The root `.nvmrc` selects the Node 24 release line for local testing and CI.
+With nvm installed, run these commands from the repository root:
+
+```bash
+nvm install
+nvm use
+node --test tests/statistics.test.cjs
+```
+
+The JavaScript tests use Node's built-in test runner and require no npm dependencies.
+
 ### Test users
 
 Create site members with registration and last-login dates distributed across a

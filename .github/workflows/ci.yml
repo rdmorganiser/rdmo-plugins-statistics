@@ -11,6 +11,7 @@ on:
       - 'rdmo_plugins_statistics/**'
       - 'scripts/**'
       - 'tests/**'
+      - .nvmrc
       - .pre-commit-config.yaml
       - pyproject.toml
       - README.md
@@ -95,12 +96,23 @@ jobs:
           unzip -l dist/*.whl | grep -q 'rdmo_plugins_statistics/static/rdmo_plugins_statistics/css/statistics.css'
           unzip -l dist/*.whl | grep -q 'rdmo_plugins_statistics/static/rdmo_plugins_statistics/js/chart.umd.min.js'
 
+  javascript-test:
+    name: JavaScript tests
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+      - run: node --test tests/statistics.test.cjs
+
   required-checks-pass:
     if: always()
     needs:
       - lint
       - dev-setup
       - test
+      - javascript-test
     runs-on: ubuntu-22.04
     steps:
       - uses: re-actors/alls-green@release/v1
