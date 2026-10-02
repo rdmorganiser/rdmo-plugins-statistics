@@ -256,10 +256,7 @@ const getTimeChartRows = (statistics, filters, container) => {
     }
 
     if (calculationName === CUMULATIVE_CALCULATION) {
-        rows = carryCumulativeValues(rows).map((row) => ({
-            ...row,
-            value: row.value - cumulativeStartValue,
-        }))
+        rows = carryCumulativeValues(rows)
     }
 
     if (!filters.start && !filters.end) {
@@ -876,7 +873,7 @@ const createStatisticsChart = (container, timeControls) => {
         return
     }
 
-    const filters = statisticsTypeName === 'time'
+    const getFilters = () => statisticsTypeName === 'time'
         ? timeControls.filters
         : {
             start: timeControls?.filters.start || '',
@@ -888,12 +885,12 @@ const createStatisticsChart = (container, timeControls) => {
     }
 
     const getPreparedData = () => {
-        return prepareChartData(statisticsType, statistics, filters, container)
+        return prepareChartData(statisticsType, statistics, getFilters(), container)
     }
 
     if (exportButton) {
         exportButton.addEventListener('click', () => {
-            downloadCsv(container, filters, getPreparedData())
+            downloadCsv(container, getFilters(), getPreparedData())
         })
     }
 
@@ -902,7 +899,7 @@ const createStatisticsChart = (container, timeControls) => {
 
     if (imageExportButton) {
         imageExportButton.addEventListener('click', () => {
-            downloadChartImage(container, filters, chart)
+            downloadChartImage(container, getFilters(), chart)
         })
     }
 
