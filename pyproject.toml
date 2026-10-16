@@ -17,7 +17,7 @@ license = {text = "Apache-2.0"}
 authors = [
   {name = "RDMO Arbeitsgemeinschaft", email = "rdmo-team@listserv.dfn.de"},
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: Web Environment",
@@ -27,8 +27,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
@@ -69,7 +67,7 @@ fallback-version = "0.0.1"
 packages = ["rdmo_plugins_statistics"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py312"
 line-length = 120
 select = [
   "B",    # flake8-bugbear

@@ -1,3 +1,5 @@
+"""CSV exports of per-site aggregate statistics."""
+
 import csv
 from pathlib import Path
 from tempfile import TemporaryDirectory

@@ -1,6 +1,6 @@
 import json
 from contextlib import redirect_stdout
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from io import StringIO
 
 import pytest
@@ -16,8 +16,8 @@ pytestmark = pytest.mark.django_db
 
 def test_create_test_users_with_dates_and_roles():
     site = Site.objects.get_current()
-    start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-    end = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    start = datetime(2024, 1, 1, tzinfo=UTC)
+    end = datetime(2025, 1, 1, tzinfo=UTC)
 
     reports = create_test_users(
         site=site,
@@ -50,8 +50,8 @@ def test_create_test_users_with_dates_and_roles():
 
 def test_create_test_users_is_reproducible_and_rejects_duplicate_batch():
     site = Site.objects.get_current()
-    start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-    end = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    start = datetime(2024, 1, 1, tzinfo=UTC)
+    end = datetime(2025, 1, 1, tzinfo=UTC)
     first = create_test_users(site=site, count=2, seed=5, batch_label='first', joined_between=(start, end))
     second = create_test_users(site=site, count=2, seed=5, batch_label='second', joined_between=(start, end))
 
