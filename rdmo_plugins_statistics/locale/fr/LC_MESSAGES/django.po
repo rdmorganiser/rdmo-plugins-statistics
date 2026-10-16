@@ -281,3 +281,27 @@ msgstr "Les graphiques des projets n’ont pas pu être mis à jour."
 #, python-format
 #~ msgid "Showing at most the %(limit)s most recently created projects."
 #~ msgstr "Affichage des %(limit)s projets créés les plus récents au maximum."
+
+#: config.py
+msgid "Absolute"
+msgstr "Absolu"
+
+#: config.py
+msgid "Relative (%)"
+msgstr "Relatif (%)"
+
+#: config.py
+msgid "Show absolute number of projects"
+msgstr "Afficher le nombre absolu de projets"
+
+#: config.py
+msgid "Show percentage of projects"
+msgstr "Afficher le pourcentage de projets"
+
+#: config.py
+msgid "Projects (%)"
+msgstr "Projets (%)"
+
+#: config.py
+msgid "Relative number of projects"
+msgstr "Nombre relatif de projets"

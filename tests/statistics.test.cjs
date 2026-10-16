@@ -887,3 +887,150 @@ test('PNG downloads use the active mode and chart filters', () => {
     })
     assert.equal(link.download, 'Example-RDMO-statistics-project.png')
 })
+
+const categoryModes = [
+    { value_mode: 'absolute', label: 'Absolute', action_label: 'Show absolute number of projects',
+        dataset_label: 'Number of projects' },
+    { value_mode: 'relative', label: 'Relative (%)', action_label: 'Show percentage of projects',
+        dataset_label: 'Projects (%)' },
+]
+
+for (const bootstrap5 of [false, true]) {
+    for (const orientation of ['horizontal', 'vertical']) {
+        test(`Bootstrap ${bootstrap5 ? 5 : 3}: ${orientation} category modes preserve counts and follow filters`, async () => {
+            const { context, createStatisticsChart } = load(bootstrap5)
+            const rows = [
+                { key: 0, label: 'First', value: 1, label_suffix: ' *' },
+                { key: 1, label: 'Second', value: 2 },
+                { key: 2, label: 'Unused', value: 0 },
+            ]
+            const timeControls = { filters: { start: '', end: '' } }
+            let chartInstance
+            context.Chart = class {
+                constructor(canvas, config) {
+                    this.canvas = canvas
+                    this.data = config.data
+                    this.options = config.options
+                    this.plugins = config.plugins
+                    chartInstance = this
+                }
+                update() {}
+                toBase64Image() { return 'data:image/png;base64,chart' }
+            }
+            context.document.getElementById = (id) => ({ textContent: JSON.stringify(
+                id === 'category-modes' ? categoryModes : { rows },
+            ) })
+            let blob
+            const link = { click() {} }
+            context.URL = {
+                createObjectURL(value) { blob = value; return 'blob:csv' },
+                revokeObjectURL() {},
+            }
+            context.document.createElement = (tag) => tag === 'a' ? link : element()
+            const container = element()
+            Object.assign(container.dataset, {
+                statisticsId: 'project-progress-statistics-data', statisticsType: 'category', chartType: 'bar',
+                chartOrientation: orientation, chartTitle: 'Project progress', siteName: 'Example',
+                datasetLabel: 'Number of projects', rowAxisTitle: 'Progress (%)', emptyMessage: 'No data',
+                xAxisTitle: orientation === 'horizontal' ? 'Number of projects' : 'Progress (%)',
+                yAxisTitle: orientation === 'horizontal' ? 'Progress (%)' : 'Number of projects',
+            })
+            for (const name of ['chart', 'chart-layout', 'total', 'export-csv', 'export-image',
+                'empty-message', 'data-table', 'chart-container', 'mode-toggle',
+                'chart-x-axis-title', 'chart-y-axis-title', 'value-heading', 'catalog']) {
+                container.children[`.statistics-${name}`] = element()
+            }
+            const catalogSelect = container.querySelector('.statistics-catalog')
+            catalogSelect.selectedOptions = [{ textContent: 'Catalog A' }]
+            container.querySelector('.statistics-chart-container').style = {}
+            const tableBody = element()
+            container.querySelector('.statistics-data-table').children.tbody = tableBody
+            container.querySelector('.statistics-chart').closest = () => container
+            const toggle = container.querySelector('.statistics-mode-toggle')
+            toggle.dataset.modesId = 'category-modes'
+            toggle.children['.statistics-mode-icon'] = element()
+            const controls = createStatisticsChart(container, timeControls)
+            const axis = orientation === 'horizontal' ? 'x' : 'y'
+            const categoryAxis = orientation === 'horizontal' ? 'y' : 'x'
+            const data = () => Array.from(chartInstance.data.datasets[0].data)
+            const assertPercentages = () => {
+                data().forEach((value, index) => {
+                    assert.ok(Math.abs(value - [100 / 3, 200 / 3, 0][index]) < 1e-10)
+                })
+            }
+            assert.deepEqual(data(), [1, 2, 0])
+            assert.equal(toggle.attributes['aria-pressed'], 'false')
+
+            toggle.listeners.click()
+            assert.equal(toggle.attributes['aria-pressed'], 'true')
+            assert.equal(toggle.title, categoryModes[0].action_label)
+            assert.equal(toggle.classList.contains('is-relative'), true)
+            assert.match(toggle.querySelector('.statistics-mode-icon').className,
+                bootstrap5 ? /bi bi-toggle-on$/ : /fa fa-toggle-on$/)
+            assertPercentages()
+            assert.equal(chartInstance.options.scales[axis].max, 100)
+            assert.equal(chartInstance.options.scales[axis].ticks.callback(50), '50%')
+            assert.equal(container.dataset[`${axis}AxisTitle`], 'Projects (%)')
+            assert.equal(container.dataset[`${categoryAxis}AxisTitle`], 'Progress (%)')
+            assert.equal(container.querySelector('.statistics-value-heading').textContent, 'Projects (%)')
+            assert.equal(tableBody.nodes[0].nodes[0].textContent, 'First *')
+            assert.equal(tableBody.nodes[0].nodes[1].textContent, '33.3%')
+            assert.equal(container.querySelector('.statistics-total').textContent, 3)
+            const dataset = chartInstance.data.datasets[0]
+            assert.equal(chartInstance.options.plugins.tooltip.callbacks.label({ dataset, dataIndex: 0 }),
+                'Projects (%): 33.3%')
+            const drawn = []
+            chartInstance.ctx = {
+                save() {}, restore() {}, fillText(value) { drawn.push(value) },
+            }
+            chartInstance.getDatasetMeta = () => ({ data: data().map(() => ({ x: 0, y: 0 })) })
+            chartInstance.plugins[0].afterDatasetsDraw(chartInstance)
+            assert.deepEqual(drawn, ['33.3%', '66.7%', '0%'])
+            container.querySelector('.statistics-export-csv').listeners.click()
+            assert.equal(link.download, 'Example-statistics-project-progress-relative.csv')
+            assert.equal(await blob.text(),
+                '"Progress (%)","Projects (%)"\n"First *","33.3"\n"Second","66.7"\n"Unused","0"')
+            container.querySelector('.statistics-export-image').listeners.click()
+            assert.equal(link.download, 'Example-statistics-project-progress-relative.png')
+
+            // Date/catalog updates recalculate the denominator without changing mode.
+            timeControls.filters.start = '2026-01-01'
+            catalogSelect.value = '42'
+            controls.setStatistics({ rows: [{ key: 100, label: '100%', value: 4 }] })
+            assert.deepEqual(data(), [100])
+            assert.equal(tableBody.nodes[0].nodes[1].textContent, '100%')
+            assert.equal(container.querySelector('.statistics-chart').attributes['aria-label'],
+                'Project progress: Catalog A: Relative (%)')
+            container.querySelector('.statistics-export-csv').listeners.click()
+            assert.equal(link.download,
+                'Example-statistics-project-progress-catalog-42-Catalog-A-relative-2026-01-01-end.csv')
+            assert.match(await blob.text(), /"100%","100"$/)
+            toggle.listeners.click()
+            assert.deepEqual(data(), [4])
+            assert.equal(chartInstance.options.scales[axis].max, undefined)
+            assert.equal(chartInstance.options.scales[axis].ticks.callback, undefined)
+            assert.equal(tableBody.nodes[0].nodes[1].textContent, 4)
+            assert.equal(container.dataset[`${axis}AxisTitle`], 'Number of projects')
+            toggle.listeners.click()
+
+            controls.setUnavailable()
+            toggle.listeners.click()
+            assert.equal(container.querySelector('.statistics-chart-layout').hidden, true)
+            assert.equal(container.querySelector('.statistics-export-csv').disabled, true)
+            toggle.listeners.click()
+            for (const emptyRows of [[], [{ key: 0, label: '0-9%', value: 0 }]]) {
+                controls.setStatistics({ rows: emptyRows })
+                assert.equal(container.querySelector('.statistics-chart-layout').hidden, true)
+                assert.equal(container.querySelector('.statistics-empty-message').hidden, false)
+                assert.equal(container.querySelector('.statistics-export-csv').disabled, true)
+                assert.equal(container.querySelector('.statistics-total').textContent, 0)
+                assert.ok(tableBody.nodes.every((row) => row.nodes[1].textContent === '0%'))
+            }
+            controls.reset()
+            assertPercentages()
+            toggle.listeners.click()
+            assert.deepEqual(data(), [1, 2, 0])
+            assert.equal(rows[0].value, 1)
+        })
+    }
+}

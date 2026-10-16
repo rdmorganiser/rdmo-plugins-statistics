@@ -161,11 +161,15 @@ New users belonging to the current site are grouped by their registration date a
 
 Catalogs assigned to the current site are displayed together with the number of projects from that site using each catalog. Unavailable catalogs remain included and are marked with an asterisk.
 
+The Absolute / Relative (%) toggle switches between project counts and each catalog's share of the projects represented in this chart, after applying the date filters. Projects without a catalog are excluded from this denominator.
+
 Catalog statistics provide site-wide reporting under `statistics.view_statistics`. Catalogs assigned to the site are included even when restricted to user groups or unavailable for new projects. Project-picker visibility and catalog editor permissions do not restrict this reporting scope. Both the selector and API validation restrict catalogs to the current site; the filter serializer obtains that site from the server configuration. Unknown, unassigned, and other-site catalog IDs receive the same validation error, without catalog details. Projects are independently restricted to the current site, including when a catalog is shared by multiple sites.
 
 ### Project progress
 
 The project-progress bar chart groups all projects belonging to the current site into fixed ten-point ranges from 0–9% through 90–99%, with a separate 100% group. The percentage groups are shown on the x-axis and project counts on the y-axis. Projects whose interview has not started are included in the 0–9% group.
+
+Its independent Absolute / Relative (%) toggle switches the project counts to each progress group's percentage of the projects matching the date and catalog filters. Both charts default to Absolute. The selected mode is preserved when filters change or Reset is used. Relative values are displayed to one decimal place, so rounded percentages may not sum to exactly 100%. Tooltips, data tables, CSV downloads, and PNG downloads follow the selected mode; relative export filenames include `relative`, and CSV values are numeric percentages under a `Projects (%)` heading.
 
 The Catalog dropdown filters this distribution to projects using a selected catalog. It defaults to All catalogs, which includes projects without a catalog. Unavailable catalogs remain selectable and are marked with an asterisk. The selection combines with the shared From and To filters: these select projects by creation date, while progress represents their current state. Clearing either date individually preserves the catalog selection; overall Reset and reloading the page restore All catalogs. Reset remains available whenever a specific catalog is selected. Catalog Usage and the time charts are unaffected by the catalog selection. The data table and downloads reflect the filtered distribution, and filenames include the selected catalog's ID and title.
 

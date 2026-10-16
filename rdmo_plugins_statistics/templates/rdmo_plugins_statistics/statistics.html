@@ -219,6 +219,18 @@
 
             <div class="statistics-chart-card">
                 <div class="statistics-chart-controls">
+                    <button
+                        type="button"
+                        class="btn-link statistics-mode-toggle"
+                        aria-label="{{ chart.toggle_label }}"
+                        aria-pressed="false"
+                        title="{{ chart.modes.1.action_label }}"
+                        data-modes-id="{{ chart.key }}-statistics-modes"
+                    >
+                        <span class="statistics-mode-option statistics-mode-option-absolute">{{ chart.modes.0.label }}</span>
+                        <span class="statistics-mode-icon fa fa-toggle-off" aria-hidden="true"></span>
+                        <span class="statistics-mode-option statistics-mode-option-relative">{{ chart.modes.1.label }}</span>
+                    </button>
                     {% if chart.key == 'project-progress' %}
                         <div class="statistics-filter-field">
                             <label for="statistics-catalog">{% translate "Catalog" %}</label>
@@ -272,7 +284,7 @@
                                     {% else %}
                                         <th scope="col">{{ chart.x_axis_title }}</th>
                                     {% endif %}
-                                    <th scope="col">{{ chart.dataset_label }}</th>
+                                    <th scope="col" class="statistics-value-heading">{{ chart.dataset_label }}</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -300,6 +312,9 @@
     {% endwith %}
 {% endfor %}
 {% for chart in category_charts %}
+    {% with modes_id=chart.key|add:"-statistics-modes" %}
+        {{ chart.modes|json_script:modes_id }}
+    {% endwith %}
     {% with statistics_id=chart.key|add:"-statistics-data" %}
         {{ chart.statistics|json_script:statistics_id }}
     {% endwith %}

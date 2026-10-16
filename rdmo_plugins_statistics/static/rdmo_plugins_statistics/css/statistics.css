@@ -118,12 +118,16 @@
 }
 
 .statistics-mode-option-new,
-.statistics-mode-option-total {
+.statistics-mode-option-total,
+.statistics-mode-option-absolute,
+.statistics-mode-option-relative {
   color: var(--rdmo-body-color, #333);
 }
 
 .statistics-mode-toggle:not(.is-cumulative) .statistics-mode-option-new,
-.statistics-mode-toggle.is-cumulative .statistics-mode-option-total {
+.statistics-mode-toggle.is-cumulative .statistics-mode-option-total,
+.statistics-mode-toggle:not(.is-relative) .statistics-mode-option-absolute,
+.statistics-mode-toggle.is-relative .statistics-mode-option-relative {
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 0.2em;

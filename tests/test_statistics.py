@@ -189,13 +189,17 @@ def test_statistics_page_uses_current_site_data(client):
     assert response.content.count(
         b'class="statistics-summary-icon fa fa-users" data-icon="people" aria-hidden="true"'
     ) == 1
-    assert response.content.count(b'class="btn-link statistics-mode-toggle"') == 2
-    assert response.content.count(b'aria-pressed="false"') == 2
+    assert response.content.count(b'class="btn-link statistics-mode-toggle"') == 4
+    assert response.content.count(b'aria-pressed="false"') == 4
+    assert response.content.count(b'aria-label="Relative number of projects"') == 2
+    for chart in (catalog_chart, progress_chart):
+        assert [mode['value_mode'] for mode in chart['modes']] == ['absolute', 'relative']
+        assert f'data-modes-id="{chart["key"]}-statistics-modes"'.encode() in response.content
     assert b'aria-label="Cumulative projects"' in response.content
     assert b'aria-label="Cumulative users"' in response.content
     assert b'title="Show total projects"' in response.content
     assert b'title="Show total users"' in response.content
-    assert response.content.count(b'class="statistics-mode-icon fa fa-toggle-off" aria-hidden="true"') == 2
+    assert response.content.count(b'class="statistics-mode-icon fa fa-toggle-off" aria-hidden="true"') == 4
     assert response.content.count(b'class="statistics-mode-option statistics-mode-option-new"') == 2
     assert response.content.count(b'class="statistics-mode-option statistics-mode-option-total"') == 2
     assert response.content.count(b'data-site-name="') == 4

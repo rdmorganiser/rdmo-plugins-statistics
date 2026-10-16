@@ -287,3 +287,27 @@ msgstr "Projektdiagramme konnten nicht aktualisiert werden."
 #, python-format
 #~ msgid "Showing at most the %(limit)s most recently created projects."
 #~ msgstr "Es werden höchstens die %(limit)s zuletzt erstellten Projekte angezeigt."
+
+#: config.py
+msgid "Absolute"
+msgstr "Absolut"
+
+#: config.py
+msgid "Relative (%)"
+msgstr "Relativ (%)"
+
+#: config.py
+msgid "Show absolute number of projects"
+msgstr "Absolute Anzahl der Projekte anzeigen"
+
+#: config.py
+msgid "Show percentage of projects"
+msgstr "Prozentualen Anteil der Projekte anzeigen"
+
+#: config.py
+msgid "Projects (%)"
+msgstr "Projekte (%)"
+
+#: config.py
+msgid "Relative number of projects"
+msgstr "Relative Anzahl der Projekte"

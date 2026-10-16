@@ -79,6 +79,21 @@ TIME_CHART_DEFINITION = {  # our predefined chart configurations
     },
 }
 
+CATEGORY_CHART_MODES = (
+    {
+        'value_mode': 'absolute',
+        'label': _('Absolute'),
+        'action_label': _('Show absolute number of projects'),
+        'dataset_label': _('Number of projects'),
+    },
+    {
+        'value_mode': 'relative',
+        'label': _('Relative (%)'),
+        'action_label': _('Show percentage of projects'),
+        'dataset_label': _('Projects (%)'),
+    },
+)
+
 CATEGORY_CHART_DEFINITION = {  # our predefined chart configurations
     'catalogs': {
         'key': 'catalog',
@@ -91,6 +106,8 @@ CATEGORY_CHART_DEFINITION = {  # our predefined chart configurations
         'note': _('* unavailable'),
         'orientation': 'horizontal',
         'title': _('Catalog usage'),
+        'toggle_label': _('Relative number of projects'),
+        'modes': CATEGORY_CHART_MODES,
         'x_axis_title': _('Number of projects'),
         'y_axis_title': _('Catalog'),
     },
@@ -105,6 +122,8 @@ CATEGORY_CHART_DEFINITION = {  # our predefined chart configurations
         'orientation': 'vertical',
         'progress_group_size': 10,
         'title': _('Project progress'),
+        'toggle_label': _('Relative number of projects'),
+        'modes': CATEGORY_CHART_MODES,
         'x_axis_title': _('Progress (%)'),
         'y_axis_title': _('Number of projects'),
     },

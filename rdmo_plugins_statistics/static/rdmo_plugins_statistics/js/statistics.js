@@ -292,7 +292,18 @@ const statisticsTypes = {
     },
 
     category: {
-        getRows: (statistics) => [...statistics.rows],
+        getRows: (statistics, _filters, container) => {
+            if (container.dataset.valueMode !== 'relative') {
+                return [...statistics.rows]
+            }
+
+            const total = statistics.rows.reduce((sum, row) => sum + row.value, 0)
+
+            return statistics.rows.map((row) => ({
+                ...row,
+                value: total ? row.value / total * 100 : 0,
+            }))
+        },
 
         hasData: (_statistics, _filters, _container, rows) => rows.some((row) => row.value > 0),
 
@@ -312,20 +323,31 @@ const prepareChartData = (statisticsType, statistics, filters, container) => {
 
     return {
         rows,
+        relative: container.dataset.valueMode === 'relative',
         displayLabels: rows.map((row) => statisticsType.getDisplayLabel(row, filters)),
         tickRotation: getLabelTickRotation(container, defaultTickRotation),
         hasData: statisticsType.hasData(statistics, filters, container, rows)
     }
 }
 
+const formatChartValue = (value, relative) => relative ? `${Number(value.toFixed(1))}%` : value
+
 const updateBarChart = (chart, preparedData) => {
+    const container = chart.canvas.closest('[data-statistics-chart]')
     chart.data.labels = preparedData.displayLabels
-    chart.data.datasets[0].label = chart.canvas.closest('[data-statistics-chart]').dataset.datasetLabel
+    chart.data.datasets[0].label = container.dataset.datasetLabel
+    chart.data.datasets[0].relative = preparedData.relative
     chart.data.datasets[0].data = preparedData.rows.map((row) => row.value)
     chart.data.datasets[0].statisticsRows = preparedData.rows
     chart.data.datasets[0].statisticsLabels = preparedData.displayLabels
     chart.options.scales.x.ticks.minRotation = preparedData.tickRotation.min
     chart.options.scales.x.ticks.maxRotation = preparedData.tickRotation.max
+    const valueScale = chart.options.scales[chart.options.indexAxis === 'y' ? 'x' : 'y']
+    valueScale.max = preparedData.relative ? 100 : undefined
+    valueScale.ticks.precision = preparedData.relative ? 1 : 0
+    valueScale.ticks.callback = preparedData.relative
+        ? (value) => formatChartValue(value, true)
+        : undefined
 
     chart.update()
 }
@@ -374,7 +396,7 @@ const drawValueLabelsPlugin = {
             const meta = chart.getDatasetMeta(datasetIndex)
 
             meta.data.forEach((bar, index) => {
-                const value = dataset.data[index]
+                const value = formatChartValue(dataset.data[index], dataset.relative)
                 const isHorizontal = chart.options.indexAxis === 'y'
 
                 if (isHorizontal) {
@@ -396,6 +418,7 @@ const drawValueLabelsPlugin = {
 const getBarChartDataset = (container, preparedData) => {
     return {
         label: container.dataset.datasetLabel,
+        relative: preparedData.relative,
         data: preparedData.rows.map((row) => row.value),
         statisticsRows: preparedData.rows,
         statisticsLabels: preparedData.displayLabels,
@@ -422,7 +445,7 @@ const getTooltipCallbacks = (container) => {
         label(item) {
             const row = item.dataset.statisticsRows[item.dataIndex]
 
-            return `${container.dataset.datasetLabel}: ${row.value}`
+            return `${container.dataset.datasetLabel}: ${formatChartValue(row.value, item.dataset.relative)}`
         }
     }
 }
@@ -475,7 +498,7 @@ const getChartOptions = (container, preparedData, isHorizontal) => {
         layout: {
             padding: {
                 top: 20,
-                right: isHorizontal ? 30 : 0
+                right: isHorizontal ? 50 : 0
             }
         },
 
@@ -736,17 +759,18 @@ const getChartExportFilename = (container, filters, extension) => {
     const mode = container.dataset.exportKey
         ? `-${container.dataset.exportKey}`
         : ''
+    const categoryMode = container.dataset.valueMode === 'relative' ? mode : ''
 
     const range = filters.start || filters.end
         ? `${filters.start || 'start'}-${filters.end || 'end'}`
         : 'all'
 
     if (filters.interval || filters.start || filters.end) {
-        const timeView = filters.interval ? `${mode}-${filters.interval}` : ''
+        const timeView = filters.interval ? `${mode}-${filters.interval}` : categoryMode
         return `${siteName}-statistics-${name}${timeView}-${range}.${extension}`
     }
 
-    return `${siteName}-statistics-${name}.${extension}`
+    return `${siteName}-statistics-${name}${categoryMode}.${extension}`
 }
 
 const downloadCsv = (container, filters, preparedData) => {
@@ -761,7 +785,9 @@ const downloadCsv = (container, filters, preparedData) => {
 
     const rows = preparedData.displayLabels.map((label, index) => [
         label,
-        preparedData.rows[index].value
+        preparedData.relative
+            ? Number(preparedData.rows[index].value.toFixed(1))
+            : preparedData.rows[index].value
     ])
 
     const csvRows = [
@@ -803,7 +829,7 @@ const renderDataTable = (tableBody, preparedData) => {
 
         labelCell.scope = 'row'
         labelCell.textContent = preparedData.displayLabels[index]
-        valueCell.textContent = row.value
+        valueCell.textContent = formatChartValue(row.value, preparedData.relative)
         tableRow.append(labelCell, valueCell)
 
         return tableRow
@@ -861,6 +887,28 @@ const applyTimeChartMode = (container, mode, nextMode) => {
     )
 }
 
+const applyCategoryChartMode = (container, mode, nextMode) => {
+    const relative = mode.value_mode === 'relative'
+    const button = container.querySelector('.statistics-mode-toggle')
+    button.setAttribute('aria-pressed', String(relative))
+    button.title = nextMode.action_label
+    button.classList.remove('is-relative')
+    if (relative) {
+        button.classList.add('is-relative')
+    }
+    button.querySelector('.statistics-mode-icon').className =
+        `statistics-mode-icon ${toggleIconPrefix} ${toggleIconPrefix}-toggle-${relative ? 'on' : 'off'}`
+
+    container.dataset.valueMode = mode.value_mode
+    container.dataset.datasetLabel = mode.dataset_label
+    container.dataset.exportKey = relative ? 'relative' : ''
+    const horizontal = container.dataset.chartOrientation === 'horizontal'
+    container.dataset[horizontal ? 'xAxisTitle' : 'yAxisTitle'] = mode.dataset_label
+    container.querySelector(horizontal ? '.statistics-chart-x-axis-title' : '.statistics-chart-y-axis-title')
+        .textContent = mode.dataset_label
+    container.querySelector('.statistics-value-heading').textContent = mode.dataset_label
+}
+
 const createStatisticsChart = (container, timeControls) => {
     const statisticsElement = document.getElementById(container.dataset.statisticsId)
     const chartElement = container.querySelector('.statistics-chart')
@@ -900,8 +948,10 @@ const createStatisticsChart = (container, timeControls) => {
             } : {}),
         }
 
-    if (statisticsTypeName === 'time') {
-        applyTimeChartMode(container, modes[0], modes[1])
+    const applyMode = statisticsTypeName === 'time' ? applyTimeChartMode : applyCategoryChartMode
+
+    if (modeButton) {
+        applyMode(container, modes[0], modes[1])
     }
 
     const getPreparedData = () => {
@@ -946,10 +996,15 @@ const createStatisticsChart = (container, timeControls) => {
 
         const preparedData = getPreparedData()
 
-        if (catalogSelect) {
-            chartElement.setAttribute('aria-label', catalogSelect.value
-                ? `${container.dataset.chartTitle}: ${catalogSelect.selectedOptions[0].textContent}`
-                : container.dataset.chartTitle)
+        if (statisticsTypeName === 'category') {
+            const labels = [container.dataset.chartTitle]
+            if (catalogSelect?.value) {
+                labels.push(catalogSelect.selectedOptions[0].textContent)
+            }
+            if (modeButton) {
+                labels.push(modes[modeIndex].label)
+            }
+            chartElement.setAttribute('aria-label', labels.join(': '))
         }
 
         chartLayout.hidden = !preparedData.hasData
@@ -963,7 +1018,8 @@ const createStatisticsChart = (container, timeControls) => {
             updateBarChart(chart, preparedData)
         }
 
-        updateTotal(totalElement, preparedData.rows, container.dataset.calculation)
+        updateTotal(totalElement, statisticsTypeName === 'category' ? statistics.rows : preparedData.rows,
+            container.dataset.calculation)
         renderDataTable(tableBody, preparedData)
 
         if (statisticsTypeName === 'category' && container.dataset.chartType === 'bar') {
@@ -974,9 +1030,11 @@ const createStatisticsChart = (container, timeControls) => {
 
     if (statisticsTypeName === 'time') {
         timeControls.subscribe(render)
+    }
+    if (modeButton) {
         modeButton.addEventListener('click', () => {
             modeIndex = 1 - modeIndex
-            applyTimeChartMode(container, modes[modeIndex], modes[1 - modeIndex])
+            applyMode(container, modes[modeIndex], modes[1 - modeIndex])
             render()
         })
     }
