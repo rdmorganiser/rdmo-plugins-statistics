@@ -1,6 +1,6 @@
 import json
 from contextlib import redirect_stdout
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from io import StringIO
 
 import pytest
@@ -52,7 +52,7 @@ def test_projects_memberships_dates_and_progress(fixture_catalog):
     question(page, 'text')
     question(page, 'boolean', 'boolean')
     guest = get_user_model().objects.create_user(username='fixture-guest')
-    date = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    date = datetime(2025, 1, 1, tzinfo=UTC)
     reports = create_test_projects(
         catalog=catalog, site=site, owners=[owner], members=[(guest, 'guest')], count=2,
         answer_fraction=1, collection_size=1, created_between=(date, date),

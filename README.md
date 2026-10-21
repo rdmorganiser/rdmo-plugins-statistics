@@ -30,7 +30,7 @@ Project, catalog statistics and user registrations are restricted to the current
 
 - RDMO 2.5.x
 - RDMO 3.0 compatibility is tested against the RDMO 3.0 release branch until 3.0 is published.
-- Python 3.10 or later, according to the supported RDMO version
+- Python 3.12 or later, according to the supported RDMO version
 
 Chart.js is included with the plugin as a static asset. No npm installation or separate JavaScript build step is required.
 
@@ -272,7 +272,211 @@ Example daily cron entry (adjust paths and supply your normal Django settings en
 
 These exports describe current records and site assignments. Creation, registration, and cumulative series exclude deleted records; progress and catalog usage describe the current state. The cumulative files are derived from currently existing records and do not reconstruct immutable historical snapshots. CI upload and Metabase ingestion are managed outside this plugin.
 
+## Detailed anonymized reporting exports
+
+For the installation-wide reporting tables used by Metabase, run:
+
+```bash
+python manage.py export_statistics_details \
+    --server-environment-name rdmo \
+    --output-dir /srv/rdmo/statistics-details
+```
+
+`--output-dir` is required. `--server-environment-name` defaults to `rdmo` and
+sets the source label used by your reporting pipeline, for example `rdmo-test`
+or `rdmo-dev`. The CSV column and manifest key are `server_environment_name`.
+
+By default both datasets are exported. Use `--users` for accounts only,
+`--projects` for projects only, or both flags for both datasets. Unselected
+datasets are neither queried nor written.
+
+This command reads the configured RDMO database through the ORM and needs no API
+token. The account dataset includes every current account, including inactive,
+staff, admin, unassigned, and multi-site accounts. The project dataset includes
+every current project across all sites.
+Each account and project appears once. This differs from the site scope of the
+dashboard, aggregate APIs, and seven-file `export_statistics` command.
+
+Anonymization is mandatory. There is no command option, setting, raw-data mode,
+or caller-supplied random seed to disable it. Both collection and CSV writing
+apply the same hard-coded anonymization: shuffled row order, the fixed
+`09:09:09` record time, and `anonymize` set to `true`.
+Account columns and standard project columns are fixed in the
+plugin; additional project-value columns must be explicitly configured. Other
+input fields are not written. Authentication queries select only the fields
+needed for these statistics, excluding passwords, usernames, and personal names.
+
+Each successful invocation prints the path to a new `run-...` directory inside
+the output directory. It contains:
+
+- `rdmo_projects.csv`: 25 standard columns plus configured project-value columns,
+  one row per project (when selected)
+- `rdmo_users.csv`: 12 columns, one row per account (when selected)
+- `manifest.json`: schema version, run ID, source label, collection timestamp/date,
+  timestamp policy, file names, ordered columns, row counts, and SHA-256 checksums
+
+The files are prepared in a hidden staging directory. Publishing renames the
+entire directory on the same filesystem, so consumers see all selected files and
+the manifest together. Only selected tables appear in the manifest. Import only
+completed `run-...` directories after command success; ignore hidden staging
+directories, including any left after a process
+is killed. Existing runs are retained, so the deployment must arrange retention.
+Empty datasets produce header-only CSVs with zero counts in the manifest. The
+manifest identifies the source even when both datasets are empty.
+
+### Ordered columns and CSV contract
+
+Standard project columns:
+
+```csv
+catalog_id,catalog_uri,catalog_title_de,catalog_title_en,site_id,site_domain,owners_domains,project_owners,project_managers,project_authors,project_guests,snapshots,test_project,child_projects,empty_project,project_values,progress_total,progress_count,collaboration_emails_domain,collaboration_site_domain,created,updated,date,server_environment_name,anonymize
+```
+
+Configured project-value columns are appended in configuration order. They also
+appear in the manifest and in header-only exports when no projects exist.
+Their names must be nonempty strings and cannot match standard project columns.
+
+Account columns:
+
+```csv
+user_email_domain,user_email_associated_domain,member,project_owner,project_manager,project_author,project_guest,date_joined,last_login,date,server_environment_name,anonymize
+```
+
+Files are UTF-8, comma-separated CSV without an index.
+Missing values use Python `None` and are written as empty CSV fields by the
+standard CSV writer. Booleans are `true`/`false`, dates are ISO dates, and
+timestamps include a UTC offset. Text is preserved with standard CSV quoting
+for embedded commas, quotes, and newlines.
+
+Neither file includes user/project identifiers, a `random_id` flag, or an index
+column. Rows are shuffled independently for each export; their positions apply
+only within that file. `anonymize` is always `true`. Real site and catalog IDs
+are retained.
+Usernames, personal names, full email addresses, project titles/descriptions,
+and source user/project IDs are not exported as columns. Domains and calendar
+dates are retained for reporting. Explicitly selected project answer text is also
+retained and can contain personal data; shuffling rows does not remove
+personal information from that text. The plugin's fixed export policy is not
+an access restriction on administrators who can change its code or query the
+source database directly.
+
+Project role counts count memberships; snapshots count all project snapshots;
+`child_projects` counts direct children. `project_values` counts current stored
+values (`snapshot=None`), including empty stored answers, when a catalog is
+assigned. Without a catalog it is zero and `empty_project` is true. Attached
+catalogs are included regardless of availability or site assignments.
+`progress_total` and `progress_count` export the stored expected-value and
+completed-value counts, preserving `None` when progress has not been computed.
+`test_project` preserves the case-insensitive `test` substring check in project
+titles and descriptions. `updated` comes from `Project.updated`.
+
+Owner and collaboration site domains include both member and manager site roles,
+using a complete, deduplicated, sorted union. Roles without member or manager
+site memberships produce empty strings. The command assumes RDMO's normal
+`user.role` relation exists. Missing roles and other unexpected errors stop the
+command and show their traceback to the administrator; no partial run is
+published. Account rows include member-site domains and project-role counts;
+manager-site domains and editor-group flags are omitted. Project-role counts
+cover the whole installation. Missing `last_login` remains `None`, so
+never-logged-in accounts do not acquire artificial recent login dates.
+
+### Export configuration and timestamp normalization
+
+The optional `RDMO_STATISTICS_EXPORT` setting is separate from chart settings:
+
+```python
+RDMO_STATISTICS_EXPORT = {
+    'timezone': 'Europe/Berlin',  # defaults to Django TIME_ZONE
+    'batch_size': 500,
+    'project_value_selectors': {
+        'subject_areas': {
+            'https://example.org/questions/catalog/my-catalog': [
+                'https://example.org/domain/subject-area',
+            ],
+            'https://example.org/questions/catalog/another-catalog': [
+                'https://example.org/domain/research-field',
+            ],
+        },
+        'project_type': {
+            'https://example.org/questions/catalog/my-catalog': [
+                'https://example.org/domain/project-type',
+            ],
+        },
+    },
+}
+```
+
+Project-answer extraction is isolated in `exports/project_values.py` and
+disabled by default. Each outer key in `project_value_selectors` names a CSV
+column. Its value maps catalog URIs to lists of attribute URIs. The example adds
+`subject_areas` and `project_type` after the standard project columns. Only
+current answers for each column's configured catalog and attributes are read.
+`project_values` remains the numeric answer count. Select only attributes
+suitable for reporting: this text can contain personal data and is not anonymized.
+
+Catalog and attribute URIs must match exactly. Attributes must be linked to a
+question. Matching nonempty current `Value.value_and_unit` displays, including
+option labels and units, are converted with `str()` and joined with `', '` in
+attribute URI and answer-position order. Each configured column contains a string,
+or `None` when the project's catalog is not configured for that column. An empty
+attribute list or no matching nonempty answers produces `''`. With no selectors,
+no extra columns are added. Display values use the active Django language.
+Catalog titles are read from the configured German/English language fields
+independently of UI language and without a fallback to another language. Settings use ordinary
+Django configuration; configuration errors propagate to the administrator.
+
+Source timestamps keep their year, month, and day in the configured export
+timezone, with the time set to `09:09:09` and microseconds set to zero. Naive
+timestamps are interpreted in that timezone. Both datasets share one collection
+timestamp and date, which remain unchanged.
+
+Email affiliation uses a domain heuristic: shorten an email domain to its last
+two dot-separated components, derive
+tenant labels from all site domains, and match labels as substrings. Unmatched
+addresses produce `other`, independently of site membership. Duplicate tenant
+labels receive `_<site_id>` after the first occurrence in domain order. Addresses
+without `@` produce an empty domain for both accounts and project members, so
+malformed addresses are never used as a fallback domain. Domain lists are sorted;
+empty project-member email domains are retained in those lists.
+
+### Scheduling and reporting-database ingestion
+
+Example daily collection:
+
+```cron
+0 2 * * * cd /srv/rdmo && .venv/bin/python manage.py export_statistics_details --server-environment-name rdmo --output-dir /srv/rdmo/statistics-details
+```
+
+Related ORM data is fetched in batches, with no per-row database lookups. The
+final anonymized rows require memory proportional to the number of accounts and
+projects. Sequential reads describe current state and do not provide a
+transactionally consistent snapshot during concurrent changes; publication of
+the files together does not change that database guarantee.
+
+CSV collection does not write the separate reporting database. The deployment
+loader must validate schema version, checksums, ordered columns, counts, and the
+manifest source label, and then:
+
+1. Load the files listed in the manifest into staging tables using the CSV format
+   described above.
+2. In one transaction, delete existing rows for that `server_environment_name` from each
+   selected reporting table and insert the staged rows with explicit column
+   lists. Leave tables omitted from the manifest unchanged.
+3. Preserve other source labels and existing table objects, grants, and Metabase
+   configuration. A successful empty export must still clear that source's rows.
+
+Use the source label from the manifest, not from the first data row. Replace
+that source's selected rows on each import. Coordinate imports for each source
+so an older run cannot replace a newer one. Validate imports and dashboards on
+a test reporting database before enabling scheduled imports.
+
 ## Development
+
+Server export code lives in `rdmo_plugins_statistics.exports`: `csv.py`
+writes site aggregates, `details.py` collects and publishes detailed batches,
+`users.py` and `projects.py` build their rows, `project_values.py` handles the
+optional lookup of selected answer content, and `utils.py` holds shared settings
+and anonymization helpers.
 
 Test setup and development fixture tools are documented in [`tests/README.md`](tests/README.md).
 
