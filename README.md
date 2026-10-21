@@ -504,3 +504,9 @@ Then remove all plugin references from the RDMO configuration:
 4. Remove the Statistics navigation entry from your theme override (`rdmo_theme/templates/core/base_navigation.html`).
 
 All entries must be removed. Otherwise, Django will still try to import the uninstalled package and the application will not start.
+
+## Acknowledgements
+
+This plugin has been developed through the [DMP4NFDI](https://dmp.services.base4nfdi.de/) project.
+DMP4NFDI is a Basic Service of Base4NFDI, funded by the German Research Foundation (DFG)
+under project [521453681](https://gepris.dfg.de/gepris/projekt/521453681) and is part of the German National Research Data Infrastructure (NFDI).
